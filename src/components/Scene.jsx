@@ -51,17 +51,19 @@ export default function Scene() {
         antialias: true,
         powerPreference: 'high-performance',
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.0,
+        toneMappingExposure: 1.04,
       }}
     >
-      <color attach="background" args={['#a9c3dd']} />
-      <fog attach="fog" args={['#b4c8de', 320, 1500]} />
+      <color attach="background" args={['#8fb2d8']} />
+      {/* haze starts further out and is tinted to match the sky at the horizon,
+          so distance reads as depth rather than as everything fading to white */}
+      <fog attach="fog" args={['#a8c2dd', 420, 1750]} />
 
       <Sky
         distance={4000}
         sunPosition={sunPos}
-        turbidity={4.5}
-        rayleigh={1.9}
+        turbidity={3.2}
+        rayleigh={2.6}
         mieCoefficient={0.006}
         mieDirectionalG={0.85}
       />

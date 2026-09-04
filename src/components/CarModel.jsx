@@ -99,6 +99,10 @@ function useCarGeometry() {
     const tyre = new THREE.LatheGeometry(tyreProfile, 24)
     tyre.rotateZ(Math.PI / 2)
 
+    // a disc that fades in over the spokes once they'd be a blur anyway
+    const blurDisc = new THREE.CylinderGeometry(0.3, 0.3, 0.02, 20)
+    blurDisc.rotateZ(Math.PI / 2)
+
     const rim = new THREE.CylinderGeometry(0.27, 0.27, 0.3, 20)
     rim.rotateZ(Math.PI / 2)
     const disc = new THREE.CylinderGeometry(0.25, 0.25, 0.045, 20)
@@ -112,6 +116,7 @@ function useCarGeometry() {
       rim,
       disc,
       spoke,
+      blurDisc,
     }
   }, [])
 }
@@ -142,17 +147,22 @@ function useMaterials(ghost, color) {
         head: g('#c8fff0', 0.3),
         tail: g('#8ffbd8', 0.3),
         disc: g('#8ffbd8', 0.2),
+        blur: g('#8ffbd8', 0),
         ghost: true,
       }
     }
     return {
       paint: new THREE.MeshPhysicalMaterial({
         color,
-        metalness: 0.9,
-        roughness: 0.19,
+        // Metallic paint at 0.9 takes the environment's colour more than its
+        // own — the blue car came out looking white against a bright sky.
+        // Lower metalness plus a strong clearcoat keeps the gloss but lets the
+        // pigment through.
+        metalness: 0.55,
+        roughness: 0.26,
         clearcoat: 1,
-        clearcoatRoughness: 0.04,
-        envMapIntensity: 2.0,
+        clearcoatRoughness: 0.05,
+        envMapIntensity: 1.35,
       }),
       trim: new THREE.MeshPhysicalMaterial({
         color: '#0e131d',
@@ -199,6 +209,14 @@ function useMaterials(ghost, color) {
         emissiveIntensity: 0.9,
         roughness: 0.3,
       }),
+      blur: new THREE.MeshStandardMaterial({
+        color: '#8f97a5',
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        roughness: 0.5,
+        metalness: 0.6,
+      }),
       disc: new THREE.MeshStandardMaterial({
         color: '#3a3d44',
         emissive: '#ff3300',
@@ -230,6 +248,7 @@ function Wheel({ geo, mat, position, steerRef, spinRef, flip = false }) {
             />
           ))}
           <mesh geometry={geo.disc} material={mat.disc} scale={[0.7, 1, 1]} />
+          <mesh geometry={geo.blurDisc} material={mat.blur} />
         </group>
       </group>
     </group>
@@ -295,6 +314,9 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       1 - Math.exp(-5 * dt),
     )
     mat.tail.emissiveIntensity = 0.7 + (s.brake > 0.05 || s.handbrake ? 2.6 : 0)
+
+    // spokes become a smear once the wheel is turning fast enough
+    mat.blur.opacity = THREE.MathUtils.clamp((s.speed - 12) / 26, 0, 0.55)
   })
 
   return (
