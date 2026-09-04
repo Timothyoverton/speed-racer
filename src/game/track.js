@@ -260,16 +260,16 @@ const TEST_PAD = buildTrack({
   ],
 })
 
-// --- Track 1: Long Ribbon -----------------------------------------------------
+// --- Track 1: Slipstream -----------------------------------------------------
 // Built to be driven flat. The car's turn rate is capped at BASE_YAW*13/speed,
 // so the tightest radius holdable at speed v is v^2/20.8 — 120m at 180km/h,
 // 77m at 144, 43m at 108. Every corner here is 60-110m, so it is long fast
 // sweepers linked by straights, with one medium corner and the jump as the only
 // real braking points. (Stadium Sprint, which this replaces, used 18-30m radii:
 // under 90km/h through everything, hence the stop-start feel.)
-const LONG_RIBBON = buildTrack({
+const SLIPSTREAM = buildTrack({
   id: 'long-ribbon-1',
-  name: 'Long Ribbon',
+  name: 'Slipstream',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
   medals: { author: 30000, gold: 34000, silver: 40000, bronze: 50000 },
@@ -305,6 +305,10 @@ const LONG_RIBBON = buildTrack({
 // wide fast asphalt, a long opening sweeper, a crest into a drop, a flowing
 // right-left, and a net downhill run to the line. Point to point.
 //
+// Corners are 65-105m so it can be driven near flat, like the real thing —
+// the drop out of the crest onto the 65m right is the one place worth braking.
+// (It was built with 24-60m corners, which capped it at 80-90km/h throughout.)
+//
 // The real one's signature is the banked wall the road sweeps up into. Banking
 // isn't in this DSL yet (corners are flat) and adding it means letting the car
 // roll, which is currently locked — so this is the flat interpretation.
@@ -313,32 +317,32 @@ const QIDDIYA_RUSH = buildTrack({
   name: 'Qiddiya Rush',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 33000, gold: 38000, silver: 45000, bronze: 55000 },
+  medals: { author: 28000, gold: 32000, silver: 38000, bronze: 47000 },
   course: [
     ['start'],
-    ['straight', 70], // long run-up, flat out
-    ['turn', -40, 60], // opening sweeper, barely lift
-    ['straight', 30],
-    ['checkpoint'],
-    ['jump', 26, 2.2], // kicker over the crest
-    ['straight', 16],
-    ['ramp', 24, -3.4], // and down the far side, steeper than the climb
-    ['turn', -85, 30], // fast right off the bottom
+    ['straight', 80], // long run-up, flat out
+    ['turn', -40, 105], // opening sweeper, barely lift
     ['straight', 34],
     ['checkpoint'],
-    ['turn', 70, 26], // left
-    ['straight', 22],
-    ['turn', -60, 24], // straight back into a right
+    ['jump', 26, 2.2], // kicker over the crest
+    ['straight', 18],
+    ['ramp', 26, -3.4], // and down the far side
+    ['turn', -70, 65], // the one corner worth braking for
     ['straight', 40],
-    ['ramp', 20, -1.8], // descending
     ['checkpoint'],
-    ['turn', 100, 34], // long left onto the final straight
-    ['straight', 80],
+    ['turn', 60, 80], // swing left
+    ['straight', 34],
+    ['turn', -75, 95], // long right
+    ['straight', 40],
+    ['ramp', 22, -1.8], // descending
+    ['checkpoint'],
+    ['turn', -70, 100], // final sweeper onto the straight
+    ['straight', 90], // run to the line
     ['finish'],
   ],
 })
 
-export const TRACKS = [TEST_PAD, LONG_RIBBON, QIDDIYA_RUSH]
+export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH]
 
 const TRACK_KEY = 'speed-racer:track'
 
