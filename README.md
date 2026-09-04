@@ -4,10 +4,19 @@ A Trackmania-style time-attack racer for the browser. Grind a track until you
 own the record. 3D, behind-the-car camera, instant restart, your ghost racing
 alongside you.
 
-Currently ships with **Track 0 "Test Pad"** — a wide, forgiving loop (long
-straight, two big sweepers, a gentle jump) for dialling in the car. The real
-track, **Stadium Sprint**, is built and waiting as `TRACKS[1]` in
-`src/game/track.js`; change the `TRACK` export there to switch.
+Three tracks, picked on the menu:
+
+- **Test Pad** — wide and forgiving, for dialling in the car.
+- **Slipstream** — 993 m point-to-point, corners 60–110 m radius so it can be
+  driven nearly flat.
+- **Qiddiya Rush** — 893 m, a homage to the Trackmania map of that name (its
+  character, not its layout — and without the banked wall, which the track DSL
+  can't express yet).
+
+**Corner radius is the design constraint.** The car's turn rate is capped at
+`BASE_YAW * YAW_REF_SPEED / speed`, so the tightest radius holdable at speed `v`
+is `v^2 / 20.8` — 120 m at 180 km/h, 77 m at 144, 43 m at 108. A track built
+with 20 m corners cannot be driven above ~90 km/h no matter how it's tuned.
 
 ## Play Now
 
@@ -19,7 +28,8 @@ _(after the repo + GitHub Pages are set up — see Deploy)_
 1. Enter a name, hit **DRIVE**.
 2. `↑`/`W` throttle · `↓`/`S` brake / reverse · `←`/`→` or `A`/`D` steer ·
    `Space` handbrake (for drifting corners) · `Del`/`Backspace` drops you back
-   at the last checkpoint · `M` mutes the engine.
+   at the last checkpoint · `C` cycles chase / close / wide / bumper cameras ·
+   `Q` quits to the menu · `M` mutes.
 3. Clear all the **checkpoints** in order, then cross the finish line.
 4. `R` restarts instantly, from anywhere, any time — no menus. This is the
    whole game: fail fast, go again.
@@ -93,6 +103,11 @@ download, so the whole game is JS.
 - **Effects** (`Effects.jsx`): tyre smoke (a 200-particle `Points` pool with a
   custom shader) and skid marks (a 420-quad instanced ring buffer) spawn from
   the rear contact patches whenever the car is sliding.
+- **Where the car is on the road** (`src/game/trackQuery.js`): a uniform grid
+  over the tiles, built once, giving signed distance from the centreline in a
+  few dot products per frame. Drives the kerb rumble — riding a kerb costs grip,
+  buzzes the camera and opens up the road-roar filter — and is what a racing
+  line or track-progress metric would build on.
 - **Feel**: the chase camera pulls back and widens its lens with speed, rolls
   against cornering load and shakes on a heavy landing; the HUD adds a rev bar,
   a gear indicator and a vignette that closes in as you get quick.
