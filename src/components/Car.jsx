@@ -19,11 +19,13 @@ const MAX_SPEED = 62 // ~220 km/h ceiling; real top speed ~175 with drag
 const LIN_DRAG = 0.05 // 1/s
 const QUAD_DRAG = 0.0003 // 1/m
 const GRIP = 12 // lateral bite, 1/s — how tightly velocity tracks heading
-const GRIP_HANDBRAKE = 2.4
+const GRIP_HANDBRAKE = 2.6 // rear steps out but the car keeps its momentum
+const HANDBRAKE_DECEL = 7 // m/s^2 of extra slowing while the handbrake is held
 const BASE_YAW = 1.6 // rad/s max turn rate (tapers with speed above YAW_REF_SPEED)
 const YAW_REF_SPEED = 13 // m/s
 const YAW_RESPONSE = 10 // how fast yaw rate approaches target
 const MAX_SLIP = 0.42 // rad — steering slip angle at full lock, low speed
+const MAX_SLIP_HANDBRAKE = 0.72 // bigger slip while drifting
 const STEER_SNAP = 6 // heading-error -> yaw-rate gain
 const TURN_MIN_SPEED = 1.5 // below this you can't really steer
 const MAX_AIR_TIME = 1.8 // airborne longer than this = fell off, respawn
@@ -131,7 +133,12 @@ export default function Car({ recorder }) {
       // rolling resistance + drag
       const drag = LIN_DRAG + QUAD_DRAG * Math.abs(vForward)
       impulse.current.addScaledVector(fwd.current, -vForward * drag * dt)
-      // lateral grip — kill sideways slide (less when handbraking => drift)
+      // handbrake: bleed forward speed as well as breaking the rear loose
+      if (input.handbrake && racing) {
+        const dv = Math.min(HANDBRAKE_DECEL * dt, Math.abs(vForward))
+        impulse.current.addScaledVector(fwd.current, -Math.sign(vForward) * dv)
+      }
+      // lateral grip — kill sideways slide (much less when handbraking => drift)
       const grip = input.handbrake ? GRIP_HANDBRAKE : GRIP
       impulse.current.addScaledVector(right.current, -vRight * Math.min(1, grip * dt))
     } else {
@@ -152,10 +159,12 @@ export default function Car({ recorder }) {
       const velHeading = Math.atan2(lv.x, lv.z)
       const carHeading = Math.atan2(fwd.current.x, fwd.current.z)
       const dirSign = vForward < 0 ? -1 : 1
-      const slip = steer * MAX_SLIP * dirSign * THREE.MathUtils.clamp(YAW_REF_SPEED / speed, 0.45, 1.3)
+      const slipMax = input.handbrake ? MAX_SLIP_HANDBRAKE : MAX_SLIP
+      const slip = steer * slipMax * dirSign * THREE.MathUtils.clamp(YAW_REF_SPEED / speed, 0.45, 1.3)
       let err = velHeading + slip - carHeading
       err = Math.atan2(Math.sin(err), Math.cos(err)) // wrap to [-pi, pi]
-      const yawCap = THREE.MathUtils.clamp((BASE_YAW * YAW_REF_SPEED) / speed, 0.4, BASE_YAW)
+      const yawCeil = input.handbrake ? BASE_YAW * 1.4 : BASE_YAW
+      const yawCap = THREE.MathUtils.clamp((yawCeil * YAW_REF_SPEED) / speed, 0.4, yawCeil)
       const targetYaw = THREE.MathUtils.clamp(err * STEER_SNAP, -yawCap, yawCap)
       const k = 1 - Math.exp(-YAW_RESPONSE * dt)
       b.setAngvel({ x: 0, y: THREE.MathUtils.lerp(av.y, targetYaw, k), z: 0 }, true)

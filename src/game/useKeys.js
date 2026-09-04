@@ -34,13 +34,16 @@ export function useKeyboardInput() {
       const action = MAP[e.code]
       if (!action) return
       input[action] = true
-      if (action === 'handbrake' || action === 'restart' || e.code.startsWith('Arrow')) {
-        e.preventDefault()
-      }
+      // Space + Arrows scroll the page / activate a focused button — block that
+      if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault()
+      const el = document.activeElement
+      if (el && el.tagName === 'BUTTON') el.blur()
     }
     const up = (e) => {
       const action = MAP[e.code]
-      if (action) input[action] = false
+      if (!action) return
+      input[action] = false
+      if (e.code === 'Space') e.preventDefault()
     }
     const blur = () => {
       for (const k of Object.keys(input)) input[k] = false
