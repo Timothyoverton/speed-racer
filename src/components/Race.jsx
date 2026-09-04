@@ -7,7 +7,7 @@ import { resetCarState } from '../game/carState.js'
 import { TRACK, CHECKPOINT_COUNT } from '../game/track.js'
 import { finishRace } from '../game/store.js'
 import { resetProgress } from '../game/progress.js'
-import { resetHud } from '../game/hud.js'
+import { resetHud, hud } from '../game/hud.js'
 import { resetTimer, stopTimer } from '../game/timing.js'
 import { GhostRecorder, activeGhost, loadGhost } from '../game/ghost.js'
 import { submitTime, medalFor, bestTime, getName } from '../game/leaderboard.js'
@@ -28,7 +28,8 @@ export default function Race() {
     const timeMs = stopTimer()
     const name = getName()
     const prevBest = bestTime(TRACK.id)
-    const { isPB } = submitTime(TRACK.id, name, timeMs)
+    const topKmh = Math.round(hud.topSpeedKmh)
+    const { isPB } = submitTime(TRACK.id, name, timeMs, topKmh)
     if (isPB) recorder.save(TRACK.id)
     finishRace({
       timeMs,
@@ -36,6 +37,7 @@ export default function Race() {
       prevBest,
       delta: prevBest != null ? timeMs - prevBest : null,
       medal: medalFor(timeMs, TRACK.medals),
+      topKmh,
     })
   }
 

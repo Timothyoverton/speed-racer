@@ -166,11 +166,11 @@ export function kerbMap() {
     const N = 128
     const [c, g] = canvas(N)
     for (let i = 0; i < 8; i++) {
-      g.fillStyle = i % 2 ? '#d8dde6' : '#d4353f'
+      g.fillStyle = i % 2 ? '#f2f4f8' : '#e01b28'
       g.fillRect(0, (i * N) / 8, N, N / 8)
     }
     // grime so it doesn't read as plastic
-    g.fillStyle = 'rgba(0,0,0,0.16)'
+    g.fillStyle = 'rgba(0,0,0,0.10)'
     for (let i = 0; i < 260; i++) {
       g.fillRect(Math.random() * N, Math.random() * N, 3, 2)
     }

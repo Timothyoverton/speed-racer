@@ -25,7 +25,7 @@ export function trackMaterials() {
   nrm.repeat.set(rw / 2.5, 2.4)
 
   const kerb = kerbMap()
-  kerb.repeat.set(1, 3)
+  kerb.repeat.set(1, 1.2) // ~60cm bands, the scale a real kerb uses
 
   const concrete = concreteMap()
   concrete.repeat.set(3, 1)

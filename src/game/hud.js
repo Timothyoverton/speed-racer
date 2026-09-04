@@ -12,6 +12,7 @@ export const hud = {
   rpm01: 0, // 0..1 through the current gear, drives the rev bar
   drift: 0, // 0..1 how sideways the car is
   handbrake: false,
+  topSpeedKmh: 0, // running max for the lap, banked with the record
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__hud = hud
@@ -27,4 +28,5 @@ export function resetHud(totalCheckpoints) {
   hud.rpm01 = 0
   hud.drift = 0
   hud.handbrake = false
+  hud.topSpeedKmh = 0
 }

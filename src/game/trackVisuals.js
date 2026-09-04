@@ -51,8 +51,10 @@ function build(track) {
     // dashed centre line
     place(dash, tile, [0, top + 0.012, 0], [0.24, 0.03, len * 0.55])
 
-    // kerbs on the inside + outside of a corner
-    if (tile.curve) {
+    // Red/white kerbs down both edges of a corner AND of any elevation change,
+    // so a crest or a dip reads as something to be ready for from a long way
+    // out — the same job the striping does on a real circuit.
+    if (tile.curve || Math.abs(tile.pitch) > 1e-3) {
       for (const s of [1, -1]) {
         place(
           kerb,

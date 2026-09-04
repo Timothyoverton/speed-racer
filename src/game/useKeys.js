@@ -14,6 +14,7 @@ const MAP = {
   KeyR: 'restart',
   Backspace: 'respawn',
   Delete: 'respawn',
+  KeyQ: 'quit',
 }
 
 // Fallback lookup on e.key. Not every keydown carries a usable e.code —
@@ -33,6 +34,7 @@ const KEY_MAP = {
   r: 'restart',
   backspace: 'respawn',
   delete: 'respawn',
+  q: 'quit',
 }
 
 function actionFor(e) {
@@ -54,6 +56,7 @@ export const input = {
   handbrake: false,
   restart: false,
   respawn: false,
+  quit: false,
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -71,7 +74,10 @@ export function useKeyboardInput() {
       const action = actionFor(e)
       if (!action) return
       // Backspace in the name field must still delete characters
-      if (action === 'respawn' && document.activeElement?.tagName === 'INPUT') return
+      if ((action === 'respawn' || action === 'quit') &&
+        document.activeElement?.tagName === 'INPUT') {
+        return
+      }
       input[action] = true
       // Space scrolls the page and activates a focused button; arrows scroll too
       if (action === 'handbrake' || action === 'respawn' || /^Arrow/.test(e.key || '')) {

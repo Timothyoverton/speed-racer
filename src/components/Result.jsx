@@ -6,7 +6,7 @@ import { formatTime, formatDelta, MEDAL_LABEL, MEDAL_ICON } from '../game/format
 export default function Result() {
   const result = useResult()
   if (!result) return null
-  const { timeMs, isPB, delta, medal } = result
+  const { timeMs, isPB, delta, medal, topKmh } = result
   const board = topTimes(TRACK.id)
 
   return (
@@ -19,6 +19,11 @@ export default function Result() {
           <span className={`medal-badge ${medal}`}>
             {MEDAL_ICON[medal]} {MEDAL_LABEL[medal]}
           </span>
+          {topKmh != null && (
+            <span className="value" style={{ color: 'var(--muted)' }}>
+              top <b style={{ color: 'var(--text)' }}>{topKmh}</b> km/h
+            </span>
+          )}
           {delta != null && (
             <span className={'delta ' + (delta <= 0 ? 'ahead' : 'behind')} style={{ fontWeight: 700 }}>
               {formatDelta(delta)} vs previous best
@@ -38,7 +43,12 @@ export default function Result() {
           {board.slice(0, 5).map((e, i) => (
             <div className="row" key={i}>
               <span className="label">{i + 1}. {e.name}</span>
-              <span className="value">{formatTime(e.timeMs)}</span>
+              <span className="value">
+                {formatTime(e.timeMs)}
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
+                  {e.topKmh != null ? ` · ${e.topKmh} km/h` : ''}
+                </span>
+              </span>
             </div>
           ))}
         </div>

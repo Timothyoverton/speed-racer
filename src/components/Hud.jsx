@@ -14,6 +14,7 @@ export default function Hud() {
   const revRef = useRef(null)
   const rushRef = useRef(null)
   const hbRef = useRef(null)
+  const topRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function Hud() {
         rushRef.current.style.opacity = (v * 0.85 + hud.drift * 0.25).toFixed(3)
       }
       if (hbRef.current) hbRef.current.classList.toggle('on', hud.handbrake)
+      if (topRef.current) topRef.current.textContent = String(Math.round(hud.topSpeedKmh))
       const d = deltaRef.current
       if (d) {
         if (hud.ghostDeltaMs == null) {
@@ -74,11 +76,14 @@ export default function Hud() {
           <b ref={speedRef}>0</b>
           <span className="unit">km/h</span>
         </div>
+        <div className="topspeed">
+          top <b ref={topRef}>0</b>
+        </div>
       </div>
 
       <div className="restart-hint">
         <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd ref={hbRef}>Space</kbd> handbrake &nbsp;·&nbsp;{' '}
-        <kbd>Del</kbd> back to checkpoint
+        <kbd>Del</kbd> back to checkpoint &nbsp;·&nbsp; <kbd>Q</kbd> quit
       </div>
 
       <button

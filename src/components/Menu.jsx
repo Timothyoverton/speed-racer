@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { TRACK, TRACKS, selectTrack } from '../game/track.js'
 import { startCountdown } from '../game/store.js'
-import { bestTime, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
+import { bestTime, bestTopSpeed, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import { initAudio } from '../game/audio.js'
 
@@ -11,6 +11,7 @@ export default function Menu() {
   const [name, setNameState] = useState(getName())
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
+  const fastest = bestTopSpeed(TRACK.id)
   const pbMedal = pb != null ? medalFor(pb, TRACK.medals) : null
 
   function drive() {
@@ -47,6 +48,12 @@ export default function Menu() {
               )}
             </span>
           </div>
+          {fastest != null && (
+            <div className="row">
+              <span className="label">Fastest speed</span>
+              <span className="value">{fastest} km/h</span>
+            </div>
+          )}
           {MEDAL_ORDER.map((m) => (
             <div className="row" key={m}>
               <span className="label">
@@ -63,7 +70,12 @@ export default function Menu() {
             {board.slice(0, 5).map((e, i) => (
               <div className="row" key={i}>
                 <span className="label">{i + 1}. {e.name}</span>
-                <span className="value">{formatTime(e.timeMs)}</span>
+                <span className="value">
+                  {formatTime(e.timeMs)}
+                  <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
+                    {e.topKmh != null ? ` · ${e.topKmh} km/h` : ''}
+                  </span>
+                </span>
               </div>
             ))}
           </div>
@@ -81,7 +93,7 @@ export default function Menu() {
         <div className="hint">
           <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />
           <kbd>Space</kbd> handbrake &nbsp;·&nbsp; <kbd>R</kbd> restart instantly<br />
-          <kbd>Del</kbd> back to last checkpoint &nbsp;·&nbsp; <kbd>M</kbd> mute
+          <kbd>Del</kbd> back to last checkpoint &nbsp;·&nbsp; <kbd>Q</kbd> quit &nbsp;·&nbsp; <kbd>M</kbd> mute
         </div>
       </div>
     </div>

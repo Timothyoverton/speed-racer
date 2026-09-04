@@ -4,7 +4,7 @@ import { RigidBody, CuboidCollider, useRapier } from '@react-three/rapier'
 import * as THREE from 'three'
 import CarModel from './CarModel.jsx'
 import { TRACK } from '../game/track.js'
-import { getState, startCountdown } from '../game/store.js'
+import { getState, startCountdown, toMenu } from '../game/store.js'
 import { input } from '../game/useKeys.js'
 import { hud } from '../game/hud.js'
 import { elapsedMs } from '../game/timing.js'
@@ -24,6 +24,11 @@ const QUAD_DRAG = 0.0003 // 1/m
 const GRIP = 12 // lateral bite, 1/s — how tightly velocity tracks heading
 const GRIP_HANDBRAKE = 1.4 // rear steps out but the car keeps its momentum
 const AERO_GRIP = 0.75 // extra grip at top speed — downforce, keeps fast corners planted
+// Friction circle: a tyre has one grip budget and cornering spends it, so the
+// engine can't have it too. Without this you pull 2g and still accelerate at
+// ~90% of the straight-line rate, which is what made hard cornering feel free.
+const LAT_G_LIMIT = 2.2 // about the most the handling model will pull
+const MIN_CORNER_THROTTLE = 0.25 // never kill drive completely
 const HANDBRAKE_DECEL = 7 // m/s^2 of extra slowing while the handbrake is held
 // The steering authority tapers off with speed. The handbrake gets much higher
 // floors on both taper curves, so grabbing it at 200 km/h still rotates the car
@@ -110,6 +115,11 @@ export default function Car({ recorder }) {
       startCountdown()
       return
     }
+    if (input.quit) {
+      input.quit = false
+      toMenu()
+      return
+    }
     if (input.respawn) {
       input.respawn = false
       const r = progress.respawn
@@ -171,7 +181,14 @@ export default function Car({ recorder }) {
       const throttle = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
       if (throttle > 0) {
         const taper = THREE.MathUtils.clamp(1 - vForward / MAX_SPEED, 0, 1)
-        impulse.current.addScaledVector(fwd.current, ACCEL * torqueFactor(rpm01) * taper * dt)
+        // lateralG is last frame's, which is close enough and avoids reordering
+        const latG = Math.abs(carState.lateralG)
+        const gripLeft = THREE.MathUtils.clamp(1 - (latG / LAT_G_LIMIT) ** 2, 0, 1)
+        const corner = MIN_CORNER_THROTTLE + (1 - MIN_CORNER_THROTTLE) * gripLeft
+        impulse.current.addScaledVector(
+          fwd.current,
+          ACCEL * torqueFactor(rpm01) * taper * corner * dt,
+        )
       } else if (throttle < 0) {
         if (vForward > 1) impulse.current.addScaledVector(fwd.current, -BRAKE_ACCEL * dt)
         else impulse.current.addScaledVector(fwd.current, -REVERSE_ACCEL * dt)
@@ -314,6 +331,7 @@ export default function Car({ recorder }) {
 
     // ---- HUD ----
     hud.speedKmh = Math.max(0, vForward) * 3.6
+    if (racing && hud.speedKmh > hud.topSpeedKmh) hud.topSpeedKmh = hud.speedKmh
     hud.timeMs = elapsedMs()
     hud.checkpoints = progress.next
     hud.airborne = !grounded

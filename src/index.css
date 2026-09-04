@@ -309,6 +309,18 @@ button.track.active {
   transition: background 0.1s linear;
 }
 
+.hud .topspeed {
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+.hud .topspeed b {
+  color: var(--text);
+  font-weight: 700;
+}
+
 /* speed rush: vignette that closes in with velocity */
 .hud .rush {
   position: absolute;

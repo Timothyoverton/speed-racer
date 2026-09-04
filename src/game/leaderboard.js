@@ -26,19 +26,27 @@ export function topTimes(trackId) {
   return readAll()[trackId] || []
 }
 
+// Fastest speed ever recorded on this track, across every kept run.
+export function bestTopSpeed(trackId) {
+  const speeds = topTimes(trackId)
+    .map((e) => e.topKmh)
+    .filter((v) => v != null)
+  return speeds.length ? Math.max(...speeds) : null
+}
+
 export function bestTime(trackId) {
   const list = topTimes(trackId)
   return list.length ? list[0].timeMs : null
 }
 
 // Returns { isPB, prevBest } and persists if it's a new entry worth keeping.
-export function submitTime(trackId, name, timeMs) {
+export function submitTime(trackId, name, timeMs, topKmh = null) {
   const all = readAll()
   const list = all[trackId] || []
   const prevBest = list.length ? list[0].timeMs : null
   const isPB = prevBest == null || timeMs < prevBest
 
-  const next = [...list, { name: name || 'YOU', timeMs, at: Date.now() }]
+  const next = [...list, { name: name || 'YOU', timeMs, topKmh, at: Date.now() }]
     .sort((a, b) => a.timeMs - b.timeMs)
     .slice(0, MAX_ENTRIES)
 
