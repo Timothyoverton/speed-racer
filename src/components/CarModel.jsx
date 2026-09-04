@@ -266,7 +266,10 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
     if (chassis.current) {
       chassis.current.rotation.z = roll.current
       chassis.current.rotation.x = pitch.current
-      chassis.current.position.y = -Math.abs(roll.current) * 0.12
+      // body drops onto the springs when it lands, then rebounds
+      chassis.current.position.y = -Math.abs(roll.current) * 0.12 - s.landing * 0.13
+      const squash = 1 - s.landing * 0.06
+      chassis.current.scale.set(1, squash, 1)
     }
 
     // lay the whole car (wheels included) along the road surface

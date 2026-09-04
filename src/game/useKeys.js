@@ -15,6 +15,7 @@ const MAP = {
   Backspace: 'respawn',
   Delete: 'respawn',
   KeyQ: 'quit',
+  KeyC: 'camera',
 }
 
 // Fallback lookup on e.key. Not every keydown carries a usable e.code —
@@ -35,6 +36,7 @@ const KEY_MAP = {
   backspace: 'respawn',
   delete: 'respawn',
   q: 'quit',
+  c: 'camera',
 }
 
 function actionFor(e) {
@@ -57,6 +59,7 @@ export const input = {
   restart: false,
   respawn: false,
   quit: false,
+  camera: false,
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -74,7 +77,7 @@ export function useKeyboardInput() {
       const action = actionFor(e)
       if (!action) return
       // Backspace in the name field must still delete characters
-      if ((action === 'respawn' || action === 'quit') &&
+      if ((action === 'respawn' || action === 'quit' || action === 'camera') &&
         document.activeElement?.tagName === 'INPUT') {
         return
       }

@@ -83,7 +83,7 @@ export default function Hud() {
 
       <div className="restart-hint">
         <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd ref={hbRef}>Space</kbd> handbrake &nbsp;·&nbsp;{' '}
-        <kbd>Del</kbd> back to checkpoint &nbsp;·&nbsp; <kbd>Q</kbd> quit
+        <kbd>Del</kbd> back to checkpoint &nbsp;·&nbsp; <kbd>C</kbd> camera &nbsp;·&nbsp; <kbd>Q</kbd> quit
       </div>
 
       <button

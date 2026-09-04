@@ -51,9 +51,13 @@ const MAX_AIR_TIME = 1.8 // airborne longer than this = fell off, respawn
 const STEER_RATE = 5.5 // how fast the steering input itself moves, 1/s
 const WHEEL_R = 0.42
 
-const CAM_DIST = 8.6
-const CAM_HEIGHT = 3.5
-const CAM_LOOKAHEAD = 12
+// chase / close / wide / bumper — C cycles them
+const CAM_MODES = [
+  { dist: 8.6, height: 3.5, look: 12, name: 'chase' },
+  { dist: 6.0, height: 2.5, look: 10, name: 'close' },
+  { dist: 12.5, height: 5.0, look: 14, name: 'wide' },
+  { dist: 0.1, height: 1.15, look: 20, name: 'bumper' },
+]
 const FOV_BASE = 60
 const FOV_GAIN = 24
 // fell off the world — relative to the track floor, since a descending track
@@ -85,6 +89,8 @@ export default function Car({ recorder }) {
   const shake = useRef(0)
   const wasRacing = useRef(false)
   const hbPrev = useRef(false)
+  const camMode = useRef(0)
+  const landDip = useRef(0)
 
   const start = TRACK.start
 
@@ -115,6 +121,11 @@ export default function Car({ recorder }) {
       initAudio()
       startCountdown()
       return
+    }
+    if (input.camera) {
+      input.camera = false
+      camMode.current = (camMode.current + 1) % CAM_MODES.length
+      camInit.current = false
     }
     if (input.quit) {
       input.quit = false
@@ -286,10 +297,15 @@ export default function Car({ recorder }) {
       if (grounded) airTimer.current = 0
       else airTimer.current += dt
     }
-    if (grounded && wasAir > 0.35) {
+    if (grounded && wasAir > 0.18) {
       thud(Math.min(0.18 + wasAir * 0.2, 0.5))
       shake.current = Math.min(wasAir * 0.5, 0.6)
+      // springs take the hit, and the camera drops with the car
+      carState.landing = Math.min(carState.landing + wasAir * 1.6, 1)
+      landDip.current = Math.min(landDip.current + wasAir * 1.1, 0.9)
     }
+    carState.landing *= 1 - Math.min(1, 4 * dt)
+    landDip.current *= 1 - Math.min(1, 5 * dt)
 
     const latAccel = av.y * vForward // cornering acceleration, m/s^2
     const longAccel = (vForward - prevForward.current) / Math.max(dt, 1e-4)
@@ -394,10 +410,11 @@ export default function Car({ recorder }) {
     if (import.meta.env.DEV && window.__freecam) return
     // Sits lower and closer than a typical follow cam, pulls back and widens
     // the lens with speed, and leans into corners.
+    const cam = CAM_MODES[camMode.current]
     const speed01 = Math.min(speed / MAX_SPEED, 1)
-    const dist = CAM_DIST + speed01 * 2.2
+    const dist = cam.dist + speed01 * (cam.dist > 1 ? 2.2 : 0)
     camDesired.current.copy(fwd.current).multiplyScalar(-dist).add(carPos.current)
-    camDesired.current.y += CAM_HEIGHT + speed01 * 0.5
+    camDesired.current.y += cam.height + speed01 * 0.5 - landDip.current * 0.5
     if (shake.current > 0.001) {
       camDesired.current.x += (Math.random() - 0.5) * shake.current
       camDesired.current.y += (Math.random() - 0.5) * shake.current
@@ -412,7 +429,7 @@ export default function Car({ recorder }) {
     }
     camLook.current.copy(carPos.current)
     camLook.current.y += 1.1
-    camLook.current.addScaledVector(fwd.current, CAM_LOOKAHEAD)
+    camLook.current.addScaledVector(fwd.current, cam.look)
     state.camera.lookAt(camLook.current)
     // roll the horizon slightly against the cornering load
     state.camera.rotateZ(THREE.MathUtils.clamp(carState.lateralG * 0.03, -0.06, 0.06))

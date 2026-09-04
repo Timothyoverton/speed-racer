@@ -22,6 +22,7 @@ export const carState = {
   // how the road under the car is tilted, in the car's own axes (radians)
   groundPitch: 0,
   groundRoll: 0,
+  landing: 0, // 0..1, decays after a hard touchdown — squashes the springs
 
   // drivetrain (for HUD + audio; does not feed the physics directly)
   gear: 1,
@@ -54,6 +55,7 @@ export function resetCarState() {
     airTime: 0,
     groundPitch: 0,
     groundRoll: 0,
+    landing: 0,
     gear: 1,
     rpm: 900,
     rpm01: 0,
