@@ -26,15 +26,16 @@ export default function Scene() {
       <hemisphereLight args={['#bcd2ff', '#1a2038', 0.8]} />
       <directionalLight
         castShadow
-        position={[60, 80, -30]}
+        position={[cx + 90, 130, cz - 60]}
+        target-position={[cx, 0, cz]}
         intensity={2.1}
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-160}
-        shadow-camera-right={160}
-        shadow-camera-top={160}
-        shadow-camera-bottom={-160}
+        shadow-camera-left={-170}
+        shadow-camera-right={170}
+        shadow-camera-top={170}
+        shadow-camera-bottom={-170}
         shadow-camera-near={1}
-        shadow-camera-far={320}
+        shadow-camera-far={420}
         shadow-bias={-0.0004}
       />
 

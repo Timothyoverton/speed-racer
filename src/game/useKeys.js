@@ -23,6 +23,10 @@ export const input = {
   restart: false,
 }
 
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  window.__input = input
+}
+
 export function useKeyboardInput() {
   const ref = useRef(input)
   useEffect(() => {

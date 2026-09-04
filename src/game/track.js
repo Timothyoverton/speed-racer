@@ -1,16 +1,12 @@
-// Procedural-but-fixed "Stadium Sprint" track.
+// Procedural-but-fixed tracks.
 //
-// A turtle walks a ribbon of road tiles. Corners are approximated with short
-// straight chords so tile edges line up. The layout is authored here as a list
-// of commands, so tweaking the course is just editing COURSE below.
-//
-// Everything is generated once at module load into TRACK, which the renderer
-// and the physics colliders both read from.
+// A turtle walks a ribbon of road tiles from a list of commands
+// (straight / turn / ramp / checkpoint). Corners are short straight chords so
+// tile edges line up. Everything downstream (meshes, colliders, checkpoints,
+// respawns) is derived from the generated data.
 
-const ROAD_WIDTH = 11
 const ROAD_THICK = 1.6
 const TILE_LEN = 6 // target length of a single straight chord
-
 const DEG = Math.PI / 180
 
 function dirOf(heading) {
@@ -19,7 +15,8 @@ function dirOf(heading) {
 }
 
 class Turtle {
-  constructor() {
+  constructor(roadWidth) {
+    this.w = roadWidth
     this.x = 0
     this.y = 0
     this.z = 0
@@ -40,7 +37,7 @@ class Turtle {
     this.tiles.push({
       pos: [cx, cy, cz],
       rot: [pitch, this.heading, 0],
-      size: [ROAD_WIDTH, ROAD_THICK, len],
+      size: [this.w, ROAD_THICK, len],
     })
     this.x += dx * len
     this.z += dz * len
@@ -93,49 +90,20 @@ class Turtle {
     this.checkpoints.push({
       pos: [this.x, this.y, this.z],
       yaw: this.heading,
-      width: ROAD_WIDTH,
+      width: this.w,
     })
     return this
   }
 
   markFinish() {
-    this.finish = {
-      pos: [this.x, this.y, this.z],
-      yaw: this.heading,
-      width: ROAD_WIDTH,
-    }
+    this.finish = { pos: [this.x, this.y, this.z], yaw: this.heading, width: this.w }
     return this
   }
 }
 
-// The course. Edit this list to reshape the track — everything downstream
-// (meshes, colliders, checkpoints) is derived from it.
-const COURSE = [
-  ['start'],
-  ['straight', 20],
-  ['checkpoint'],
-  ['straight', 14],
-  ['turn', -78, 17], // long right sweep
-  ['straight', 10],
-  ['ramp', 13, 2.4], // launch up
-  ['straight', 9], // brief air / elevated ledge
-  ['ramp', 9, -2.4], // land back down
-  ['checkpoint'],
-  ['straight', 16],
-  ['turn', 85, 14], // left
-  ['straight', 22],
-  ['turn', -55, 20], // gentle right
-  ['checkpoint'],
-  ['straight', 14],
-  ['turn', 125, 11], // tight left, almost a hairpin
-  ['straight', 30],
-  ['finish'],
-]
-
-function buildTrack() {
-  const t = new Turtle()
-
-  for (const [cmd, a, b] of COURSE) {
+function buildTrack({ id, name, roadWidth, medals, course }) {
+  const t = new Turtle(roadWidth)
+  for (const [cmd, a, b] of course) {
     if (cmd === 'start') t.markStart()
     else if (cmd === 'finish') t.markFinish()
     else if (cmd === 'checkpoint') t.checkpoint()
@@ -143,25 +111,121 @@ function buildTrack() {
     else if (cmd === 'ramp') t.ramp(a, b)
     else if (cmd === 'turn') t.turn(a, b)
   }
-
   return {
-    id: 'stadium-sprint-1',
-    name: 'Stadium Sprint',
-    roadWidth: ROAD_WIDTH,
+    id,
+    name,
+    roadWidth,
     roadThick: ROAD_THICK,
     tiles: t.tiles,
+    // Merged collider slabs: consecutive tiles with the same orientation become
+    // one long box, so straights have no seams for the car to catch on.
+    slabs: mergeTiles(t.tiles),
     checkpoints: t.checkpoints,
     start: t.start,
     finish: t.finish,
-    // target times in ms. Beat "author" and you have truly mastered it.
-    medals: {
-      author: 26000,
-      gold: 29000,
-      silver: 33000,
-      bronze: 40000,
-    },
+    medals,
   }
 }
 
-export const TRACK = buildTrack()
+function mergeTiles(tiles) {
+  const slabs = []
+  let run = null
+  const sameOrient = (a, b) =>
+    Math.abs(a.rot[0] - b.rot[0]) < 1e-6 && Math.abs(a.rot[1] - b.rot[1]) < 1e-6
+
+  for (const tile of tiles) {
+    if (run && sameOrient(run.tiles[0], tile)) {
+      run.tiles.push(tile)
+    } else {
+      run = { tiles: [tile] }
+      slabs.push(run)
+    }
+  }
+
+  return slabs.map((s) => {
+    const first = s.tiles[0]
+    const last = s.tiles[s.tiles.length - 1]
+    const [pitch, yaw] = first.rot
+    // unit vector along the run (accounting for the ramp pitch)
+    const horiz = Math.cos(pitch)
+    const dir = [Math.sin(yaw) * horiz, Math.sin(pitch), Math.cos(yaw) * horiz]
+    const startEdge = first.pos.map((c, k) => c - (dir[k] * first.size[2]) / 2)
+    const endEdge = last.pos.map((c, k) => c + (dir[k] * last.size[2]) / 2)
+    const len = Math.hypot(
+      endEdge[0] - startEdge[0],
+      endEdge[1] - startEdge[1],
+      endEdge[2] - startEdge[2],
+    )
+    return {
+      pos: [
+        (startEdge[0] + endEdge[0]) / 2,
+        (startEdge[1] + endEdge[1]) / 2,
+        (startEdge[2] + endEdge[2]) / 2,
+      ],
+      rot: first.rot,
+      size: [first.size[0], first.size[1], len],
+      // how many tiles this slab covers — 1 means it's a lone arc chord that
+      // needs extra collider overlap to keep the surface seamless
+      span: s.tiles.length,
+    }
+  })
+}
+
+// --- Track 0: a wide, forgiving test pad ------------------------------------
+// Long straight (accel / top speed / braking), two big open sweepers, one
+// gentle jump. Hard to hit a wall — for feeling out the car, not for racing.
+const TEST_PAD = buildTrack({
+  id: 'test-pad-0',
+  name: 'Test Pad',
+  roadWidth: 30,
+  medals: { author: 24000, gold: 30000, silver: 38000, bronze: 50000 },
+  course: [
+    ['start'],
+    ['straight', 100],
+    ['checkpoint'],
+    ['turn', 120, 48], // big, lazy left
+    ['straight', 46],
+    ['ramp', 22, 2.8], // gentle launch
+    ['straight', 34],
+    ['checkpoint'],
+    ['turn', 110, 48], // big, lazy left back around
+    ['straight', 70],
+    ['finish'],
+  ],
+})
+
+// --- Track 1: Stadium Sprint (the real one) --------------------------------
+const STADIUM_SPRINT = buildTrack({
+  id: 'stadium-sprint-1',
+  name: 'Stadium Sprint',
+  roadWidth: 15,
+  medals: { author: 30000, gold: 36000, silver: 44000, bronze: 55000 },
+  course: [
+    ['start'],
+    ['straight', 26],
+    ['checkpoint'],
+    ['straight', 20],
+    ['turn', -70, 26],
+    ['straight', 16],
+    ['ramp', 15, 2.2],
+    ['straight', 10],
+    ['ramp', 12, -2.2],
+    ['straight', 10],
+    ['checkpoint'],
+    ['straight', 20],
+    ['turn', 78, 24],
+    ['straight', 26],
+    ['turn', -50, 30],
+    ['checkpoint'],
+    ['straight', 18],
+    ['turn', 100, 18],
+    ['straight', 34],
+    ['finish'],
+  ],
+})
+
+export const TRACKS = [TEST_PAD, STADIUM_SPRINT]
+
+// Active track. Swap to STADIUM_SPRINT (or TRACKS[1]) once the dynamics feel good.
+export const TRACK = TEST_PAD
 export const CHECKPOINT_COUNT = TRACK.checkpoints.length

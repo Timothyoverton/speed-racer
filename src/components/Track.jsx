@@ -11,15 +11,35 @@ export default function Track({ onFinish }) {
 
   return (
     <group>
-      {/* one static body holds every road + rail collider */}
-      <RigidBody type="fixed" colliders={false} friction={0.9}>
-        {TRACK.tiles.map((tile, i) => {
-          const [w, h, l] = tile.size
+      {/* one static body holds every road + rail collider. Colliders come from
+          the merged slabs (long boxes over straight runs) so there are no tile
+          seams for the frictionless car to trip on. */}
+      <RigidBody type="fixed" colliders={false}>
+        {TRACK.slabs.map((slab, i) => {
+          const [w, h, l] = slab.size
+          // lone arc chords: pad the road box so consecutive angled slabs
+          // overlap and leave no seam for the car to catch / launch on
+          const pad = slab.span <= 1 ? 2.2 : 0.8
+          const rw = TRACK.roadWidth // rails sit on the *visual* edge
           return (
-            <group key={i} position={tile.pos} rotation={tile.rot}>
-              <CuboidCollider args={[w / 2, h / 2, l / 2]} />
-              <CuboidCollider args={[0.12, RAIL_H, l / 2]} position={[w / 2 + 0.12, h / 2 + RAIL_H, 0]} />
-              <CuboidCollider args={[0.12, RAIL_H, l / 2]} position={[-w / 2 - 0.12, h / 2 + RAIL_H, 0]} />
+            <group key={i} position={slab.pos} rotation={slab.rot}>
+              <CuboidCollider
+                args={[w / 2 + pad, h / 2, l / 2 + pad]}
+                friction={0}
+                restitution={0}
+              />
+              <CuboidCollider
+                args={[0.3, RAIL_H, l / 2 + pad + 0.5]}
+                position={[rw / 2 + 0.3, h / 2 + RAIL_H, 0]}
+                friction={0}
+                restitution={0.6}
+              />
+              <CuboidCollider
+                args={[0.3, RAIL_H, l / 2 + pad + 0.5]}
+                position={[-rw / 2 - 0.3, h / 2 + RAIL_H, 0]}
+                friction={0}
+                restitution={0.6}
+              />
             </group>
           )
         })}
@@ -40,8 +60,8 @@ export default function Track({ onFinish }) {
               <meshStandardMaterial color="#e9f0ff" emissive="#4a5a80" emissiveIntensity={0.3} />
             </mesh>
             {[1, -1].map((s) => (
-              <mesh key={s} position={[s * (w / 2 + 0.12), h / 2 + RAIL_H, 0]}>
-                <boxGeometry args={[0.24, RAIL_H * 2, l]} />
+              <mesh key={s} position={[s * (w / 2 + 0.2), h / 2 + RAIL_H, 0]}>
+                <boxGeometry args={[0.4, RAIL_H * 2, l]} />
                 <meshStandardMaterial
                   color={s > 0 ? '#3ba7ff' : '#ff4d5a'}
                   emissive={s > 0 ? '#12405f' : '#5c1016'}
