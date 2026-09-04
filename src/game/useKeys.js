@@ -16,6 +16,35 @@ const MAP = {
   Delete: 'respawn',
 }
 
+// Fallback lookup on e.key. Not every keydown carries a usable e.code —
+// remote-desktop sessions, on-screen/virtual keyboards and synthetic events
+// routinely leave it empty, and then a code-only lookup silently drops the key.
+const KEY_MAP = {
+  ' ': 'handbrake',
+  spacebar: 'handbrake',
+  arrowup: 'forward',
+  arrowdown: 'back',
+  arrowleft: 'left',
+  arrowright: 'right',
+  w: 'forward',
+  s: 'back',
+  a: 'left',
+  d: 'right',
+  r: 'restart',
+  backspace: 'respawn',
+  delete: 'respawn',
+}
+
+function actionFor(e) {
+  if (e.code && MAP[e.code]) return MAP[e.code]
+  if (!e.key) return null
+  return KEY_MAP[e.key === ' ' ? ' ' : e.key.toLowerCase()] || null
+}
+
+function isMuteKey(e) {
+  return e.code === 'KeyM' || e.key?.toLowerCase() === 'm'
+}
+
 // Shared input state. Touch buttons in App also poke at this object.
 export const input = {
   forward: false,
@@ -35,37 +64,39 @@ export function useKeyboardInput() {
   const ref = useRef(input)
   useEffect(() => {
     const down = (e) => {
-      if (e.code === 'KeyM' && document.activeElement?.tagName !== 'INPUT') {
+      if (isMuteKey(e) && document.activeElement?.tagName !== 'INPUT') {
         toggleMute()
         return
       }
-      const action = MAP[e.code]
+      const action = actionFor(e)
       if (!action) return
       // Backspace in the name field must still delete characters
       if (action === 'respawn' && document.activeElement?.tagName === 'INPUT') return
       input[action] = true
-      // Space + Arrows scroll the page / activate a focused button — block that
-      if (e.code === 'Space' || e.code.startsWith('Arrow') || action === 'respawn') {
+      // Space scrolls the page and activates a focused button; arrows scroll too
+      if (action === 'handbrake' || action === 'respawn' || /^Arrow/.test(e.key || '')) {
         e.preventDefault()
       }
       const el = document.activeElement
       if (el && el.tagName === 'BUTTON') el.blur()
     }
     const up = (e) => {
-      const action = MAP[e.code]
+      const action = actionFor(e)
       if (!action) return
       input[action] = false
-      if (e.code === 'Space') e.preventDefault()
+      if (action === 'handbrake') e.preventDefault()
     }
     const blur = () => {
       for (const k of Object.keys(input)) input[k] = false
     }
-    window.addEventListener('keydown', down)
-    window.addEventListener('keyup', up)
+    // Capture phase: a focused button or a host container that handles Space
+    // itself would otherwise stop the event before it bubbles up to window.
+    window.addEventListener('keydown', down, true)
+    window.addEventListener('keyup', up, true)
     window.addEventListener('blur', blur)
     return () => {
-      window.removeEventListener('keydown', down)
-      window.removeEventListener('keyup', up)
+      window.removeEventListener('keydown', down, true)
+      window.removeEventListener('keyup', up, true)
       window.removeEventListener('blur', blur)
     }
   }, [])

@@ -13,6 +13,7 @@ export default function Hud() {
   const gearRef = useRef(null)
   const revRef = useRef(null)
   const rushRef = useRef(null)
+  const hbRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function Hud() {
         const v = Math.min(Math.max((hud.speedKmh - 90) / 130, 0), 1)
         rushRef.current.style.opacity = (v * 0.85 + hud.drift * 0.25).toFixed(3)
       }
+      if (hbRef.current) hbRef.current.classList.toggle('on', hud.handbrake)
       const d = deltaRef.current
       if (d) {
         if (hud.ghostDeltaMs == null) {
@@ -75,7 +77,7 @@ export default function Hud() {
       </div>
 
       <div className="restart-hint">
-        <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd>Space</kbd> handbrake &nbsp;·&nbsp;{' '}
+        <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd ref={hbRef}>Space</kbd> handbrake &nbsp;·&nbsp;{' '}
         <kbd>Del</kbd> back to checkpoint
       </div>
 

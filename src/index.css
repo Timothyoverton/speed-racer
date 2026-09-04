@@ -380,6 +380,15 @@ kbd {
   text-transform: uppercase;
 }
 
+/* lights up while the handbrake is actually held — if this doesn't light,
+   the keypress isn't reaching the game */
+.hud kbd.on {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #04122a;
+  font-weight: 700;
+}
+
 /* ---- touch controls ---- */
 .touch {
   position: absolute;

@@ -11,6 +11,7 @@ export const hud = {
   gear: 1,
   rpm01: 0, // 0..1 through the current gear, drives the rev bar
   drift: 0, // 0..1 how sideways the car is
+  handbrake: false,
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__hud = hud
@@ -25,4 +26,5 @@ export function resetHud(totalCheckpoints) {
   hud.gear = 1
   hud.rpm01 = 0
   hud.drift = 0
+  hud.handbrake = false
 }

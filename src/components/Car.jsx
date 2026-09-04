@@ -317,6 +317,7 @@ export default function Car({ recorder }) {
     hud.gear = carState.gear
     hud.rpm01 = carState.rpm01
     hud.drift = carState.slip
+    hud.handbrake = carState.handbrake
 
     ghostThrottle.current += dt
     if (activeGhost.frames && ghostThrottle.current > 0.15) {
