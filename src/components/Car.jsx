@@ -13,6 +13,7 @@ import { activeGhost, ghostTimeAtPosition } from '../game/ghost.js'
 import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
 import { updateAudio, idleAudio, thud, initAudio } from '../game/audio.js'
+import { getCarColour } from '../game/carColour.js'
 
 // --- tuning (all in m, s) ---------------------------------------------------
 const ACCEL = 16 // m/s^2 at full throttle (tapers to 0 near MAX_SPEED)
@@ -416,7 +417,7 @@ export default function Car({ recorder }) {
     >
       {/* frictionless box — all longitudinal / lateral behaviour is done in code */}
       <CuboidCollider args={[0.85, 0.42, 1.85]} friction={0} restitution={0.2} />
-      <CarModel live />
+      <CarModel live color={getCarColour()} />
     </RigidBody>
   )
 }

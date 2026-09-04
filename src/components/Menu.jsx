@@ -4,11 +4,13 @@ import { startCountdown } from '../game/store.js'
 import { bestTime, bestTopSpeed, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import { initAudio } from '../game/audio.js'
+import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
 export default function Menu() {
   const [name, setNameState] = useState(getName())
+  const [colour, setColour] = useState(getCarColourId)
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
   const fastest = bestTopSpeed(TRACK.id)
@@ -80,6 +82,23 @@ export default function Menu() {
             ))}
           </div>
         )}
+
+        <div className="colours">
+          <span className="label">Car</span>
+          {CAR_COLOURS.map((c) => (
+            <button
+              key={c.id}
+              className={'swatch' + (c.id === colour ? ' active' : '')}
+              style={{ background: c.hex }}
+              title={c.name}
+              aria-label={c.name}
+              onClick={() => {
+                setCarColourId(c.id)
+                setColour(c.id)
+              }}
+            />
+          ))}
+        </div>
 
         <input
           className="name"

@@ -209,6 +209,33 @@ button.track.active {
   cursor: default;
 }
 
+.colours {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.colours .label {
+  color: var(--muted);
+  font-size: 14px;
+  margin-right: 2px;
+}
+
+button.swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px var(--stroke), inset 0 -4px 8px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+button.swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text), 0 0 12px rgba(255, 255, 255, 0.35);
+}
+
 /* ---- HUD ---- */
 .hud {
   position: absolute;
