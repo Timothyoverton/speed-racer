@@ -205,9 +205,13 @@ export default function Car({ recorder }) {
     const av = b.angvel()
     const hb = racing && input.handbrake
     if (racing && grounded && speed > TURN_MIN_SPEED) {
-      const velHeading = Math.atan2(lv.x, lv.z)
+      // Reversing flips which way the nose should point relative to travel, so
+      // the velocity vector is flipped with it. Without this the heading error
+      // is ~180 degrees, wraps around +/-pi, and comes out inverted and pinned
+      // at full lock — steering left reversed you to the right.
+      const dirSign = vForward < -0.5 ? -1 : 1
+      const velHeading = Math.atan2(lv.x * dirSign, lv.z * dirSign)
       const carHeading = Math.atan2(fwd.current.x, fwd.current.z)
-      const dirSign = vForward < 0 ? -1 : 1
       const slipMax = hb ? MAX_SLIP_HANDBRAKE : MAX_SLIP
       const taper = THREE.MathUtils.clamp(
         YAW_REF_SPEED / speed,
