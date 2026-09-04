@@ -137,7 +137,7 @@ export function initAudio() {
   roadGain.connect(master)
   road.start()
 
-  nodes = { oscs, engineGain, engineFilter, windFilter, windGain, skidFilter, skidGain, roadGain }
+  nodes = { oscs, engineGain, engineFilter, windFilter, windGain, skidFilter, skidGain, roadGain, roadFilter }
   running = true
 }
 
@@ -165,7 +165,11 @@ export function updateAudio(s) {
   nodes.windFilter.frequency.setTargetAtTime(500 + speed01 * 900, t, k)
 
   const rumble = s.grounded ? speed01 * 0.07 : 0
-  nodes.roadGain.gain.setTargetAtTime(rumble, t, k)
+
+  // riding a kerb: shove the road roar up and drop its filter, so it growls
+  const kerb = s.onKerb ? Math.min(s.speed / 26, 1) : 0
+  nodes.roadGain.gain.setTargetAtTime(rumble + kerb * 0.16, t, 0.03)
+  nodes.roadFilter.frequency.setTargetAtTime(320 + kerb * 260, t, 0.05)
 
   const screech = s.grounded ? Math.min(Math.max(s.slip - 0.12, 0) * 1.9, 1) : 0
   nodes.skidGain.gain.setTargetAtTime(screech * 0.13, t, 0.06)

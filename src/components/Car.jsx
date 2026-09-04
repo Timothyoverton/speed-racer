@@ -14,6 +14,7 @@ import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
 import { updateAudio, idleAudio, thud, initAudio } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
+import { sampleTrack } from '../game/trackQuery.js'
 
 // --- tuning (all in m, s) ---------------------------------------------------
 const ACCEL = 16 // m/s^2 at full throttle (tapers to 0 near MAX_SPEED)
@@ -30,6 +31,8 @@ const AERO_GRIP = 0.75 // extra grip at top speed — downforce, keeps fast corn
 // ~90% of the straight-line rate, which is what made hard cornering feel free.
 const LAT_G_LIMIT = 2.2 // about the most the handling model will pull
 const MIN_CORNER_THROTTLE = 0.25 // never kill drive completely
+const KERB_GRIP = 0.72 // a kerb is not tarmac — it lets go a little
+const KERB_SHAKE = 0.055 // how hard the camera buzzes while you're riding one
 const HANDBRAKE_DECEL = 7 // m/s^2 of extra slowing while the handbrake is held
 // The steering authority tapers off with speed. The handbrake gets much higher
 // floors on both taper curves, so grabbing it at 200 km/h still rotates the car
@@ -177,6 +180,11 @@ export default function Car({ recorder }) {
       grounded = t.y < 1.4
     }
 
+    // where across the road are we — drives the kerb rumble
+    const onRoad = sampleTrack(t.x, t.z)
+    carState.lateral = onRoad ? onRoad.lateral : 0
+    carState.onKerb = !!(onRoad && onRoad.onKerb && grounded)
+
     const lv = b.linvel()
     vel.current.set(lv.x, lv.y, lv.z)
     const vForward = vel.current.dot(fwd.current)
@@ -235,7 +243,7 @@ export default function Car({ recorder }) {
       // *not* apply under the handbrake: a locked, sliding tyre has no grip to
       // press harder onto the road.
       const aero = 1 + Math.min(speed / MAX_SPEED, 1) * AERO_GRIP
-      const grip = input.handbrake ? GRIP_HANDBRAKE : GRIP * aero
+      const grip = (input.handbrake ? GRIP_HANDBRAKE : GRIP * aero) * (carState.onKerb ? KERB_GRIP : 1)
       impulse.current.addScaledVector(right.current, -vRight * Math.min(1, grip * dt))
     } else {
       impulse.current.addScaledVector(fwd.current, -vForward * 0.05 * dt)
@@ -415,6 +423,9 @@ export default function Car({ recorder }) {
     const dist = cam.dist + speed01 * (cam.dist > 1 ? 2.2 : 0)
     camDesired.current.copy(fwd.current).multiplyScalar(-dist).add(carPos.current)
     camDesired.current.y += cam.height + speed01 * 0.5 - landDip.current * 0.5
+    if (carState.onKerb && speed > 8) {
+      shake.current = Math.max(shake.current, KERB_SHAKE * Math.min(speed / 30, 1.4))
+    }
     if (shake.current > 0.001) {
       camDesired.current.x += (Math.random() - 0.5) * shake.current
       camDesired.current.y += (Math.random() - 0.5) * shake.current
