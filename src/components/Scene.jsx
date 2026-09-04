@@ -1,4 +1,5 @@
-import { Canvas } from '@react-three/fiber'
+import { useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
 import { Sky, Environment, Lightformer } from '@react-three/drei'
 import * as THREE from 'three'
@@ -6,6 +7,7 @@ import Race from './Race.jsx'
 import Scenery from './Scenery.jsx'
 import { useRunId } from '../game/store.js'
 import { BOUNDS } from '../game/trackVisuals.js'
+import { carState } from '../game/carState.js'
 
 const [cx, , cz] = BOUNDS.center
 const R = BOUNDS.radius
@@ -15,10 +17,27 @@ const SUN = [-0.55, 0.32, 0.77]
 const SUN_DIST = 300
 const sunPos = [cx + SUN[0] * SUN_DIST, SUN[1] * SUN_DIST, cz + SUN[2] * SUN_DIST]
 
-const shadowSpan = Math.min(R + 60, 220)
+// The shadow camera follows the car, so it only has to cover what's near it —
+// which also makes the shadows much sharper than stretching one box over the
+// whole circuit. Long Ribbon is ~1km end to end; a fixed box centred on the
+// track would simply run out before the ends.
+const shadowSpan = 110
+
+function SunFollow({ lightRef }) {
+  useFrame(() => {
+    const l = lightRef.current
+    if (!l) return
+    const [px, py, pz] = carState.pos
+    l.position.set(px + SUN[0] * SUN_DIST, py + SUN[1] * SUN_DIST, pz + SUN[2] * SUN_DIST)
+    l.target.position.set(px, py, pz)
+    l.target.updateMatrixWorld()
+  })
+  return null
+}
 
 export default function Scene() {
   const runId = useRunId()
+  const sun = useRef(null)
 
   return (
     <Canvas
@@ -98,6 +117,7 @@ export default function Scene() {
 
       <hemisphereLight args={['#cfe0ff', '#37402f', 0.55]} />
       <directionalLight
+        ref={sun}
         castShadow
         position={sunPos}
         target-position={[cx, 0, cz]}
@@ -114,6 +134,7 @@ export default function Scene() {
         shadow-normalBias={0.03}
       />
 
+      <SunFollow lightRef={sun} />
       <Scenery />
 
       <Physics timeStep={1 / 60} gravity={[0, -22, 0]} interpolate>

@@ -260,32 +260,42 @@ const TEST_PAD = buildTrack({
   ],
 })
 
-// --- Track 1: Stadium Sprint (the real one) --------------------------------
-const STADIUM_SPRINT = buildTrack({
-  id: 'stadium-sprint-1',
-  name: 'Stadium Sprint',
-  roadWidth: 15,
-  medals: { author: 30000, gold: 36000, silver: 44000, bronze: 55000 },
+// --- Track 1: Long Ribbon -----------------------------------------------------
+// Built to be driven flat. The car's turn rate is capped at BASE_YAW*13/speed,
+// so the tightest radius holdable at speed v is v^2/20.8 — 120m at 180km/h,
+// 77m at 144, 43m at 108. Every corner here is 60-110m, so it is long fast
+// sweepers linked by straights, with one medium corner and the jump as the only
+// real braking points. (Stadium Sprint, which this replaces, used 18-30m radii:
+// under 90km/h through everything, hence the stop-start feel.)
+const LONG_RIBBON = buildTrack({
+  id: 'long-ribbon-1',
+  name: 'Long Ribbon',
+  roadWidth: 20,
+  // estimates from the layout, not driven times — retune once there are laps
+  medals: { author: 30000, gold: 34000, silver: 40000, bronze: 50000 },
   course: [
     ['start'],
-    ['straight', 26],
+    ['straight', 90], // long launch
+    ['turn', -35, 110], // huge opening right, flat
+    ['straight', 40],
     ['checkpoint'],
-    ['straight', 20],
-    ['turn', -70, 26],
-    ['straight', 16],
-    ['ramp', 22, 1.5],
-    ['straight', 10],
-    ['ramp', 20, -1.5],
-    ['straight', 10],
+    ['turn', 45, 90], // fast left
+    ['straight', 30],
+    ['jump', 26, 1.8], // kicker
+    ['straight', 40],
+    ['turn', -60, 75], // long right sweeper
+    ['straight', 36],
     ['checkpoint'],
-    ['straight', 20],
-    ['turn', 78, 24],
-    ['straight', 26],
-    ['turn', -50, 30],
+    ['turn', 70, 60], // the one corner worth lifting for
+    ['straight', 44],
+    ['turn', -50, 80],
+    ['straight', 30],
+    ['ramp', 24, -2.2], // drop away
+    ['turn', 40, 95], // fast left
+    ['straight', 50],
     ['checkpoint'],
-    ['straight', 18],
-    ['turn', 100, 18],
-    ['straight', 34],
+    ['turn', -55, 70],
+    ['straight', 90], // run to the line
     ['finish'],
   ],
 })
@@ -328,7 +338,7 @@ const QIDDIYA_RUSH = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, STADIUM_SPRINT, QIDDIYA_RUSH]
+export const TRACKS = [TEST_PAD, LONG_RIBBON, QIDDIYA_RUSH]
 
 const TRACK_KEY = 'speed-racer:track'
 
