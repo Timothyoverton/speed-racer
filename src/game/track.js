@@ -21,13 +21,14 @@ class Turtle {
     this.y = 0
     this.z = 0
     this.heading = 0
+    this.dist = 0
     this.tiles = []
     this.checkpoints = []
     this.start = null
     this.finish = null
   }
 
-  _placeTile(len, pitch) {
+  _placeTile(len, pitch, curve = 0) {
     const [dx, dz] = dirOf(this.heading)
     const cx = this.x + (dx * len) / 2
     const cz = this.z + (dz * len) / 2
@@ -38,7 +39,11 @@ class Turtle {
       pos: [cx, cy, cz],
       rot: [pitch, this.heading, 0],
       size: [this.w, ROAD_THICK, len],
+      // 0 straight, +1 mid-left-hander, -1 mid-right-hander — drives kerbs
+      curve,
+      dist: this.dist,
     })
+    this.dist += len
     this.x += dx * len
     this.z += dz * len
     this.y += rise
@@ -75,7 +80,7 @@ class Turtle {
     const chord = arcLen / steps
     for (let i = 0; i < steps; i++) {
       this.heading += dAngle / 2
-      this._placeTile(chord, 0)
+      this._placeTile(chord, 0, sign)
       this.heading += dAngle / 2
     }
     return this
@@ -123,6 +128,7 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     checkpoints: t.checkpoints,
     start: t.start,
     finish: t.finish,
+    length: t.dist,
     medals,
   }
 }

@@ -223,12 +223,85 @@ kbd {
   text-align: right;
 }
 
+.hud .speed .readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .hud .speed b {
-  display: block;
-  font-size: 40px;
+  font-size: 52px;
   font-weight: 800;
   color: var(--text);
   line-height: 1;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.hud .speed .unit {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.hud .speed .gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: rgba(8, 12, 26, 0.55);
+  color: var(--accent-2);
+  font-size: 22px;
+  font-weight: 800;
+  align-self: center;
+}
+
+.hud .revbar {
+  width: 216px;
+  height: 7px;
+  margin: 0 0 10px auto;
+  border-radius: 4px;
+  background: rgba(8, 12, 26, 0.6);
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+}
+
+.hud .revbar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: background 0.1s linear;
+}
+
+/* speed rush: vignette that closes in with velocity */
+.hud .rush {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 76% 62% at 50% 52%, rgba(0, 0, 0, 0) 55%, rgba(4, 8, 20, 0.85) 100%);
+  mix-blend-mode: multiply;
+}
+
+.hud .mute {
+  position: absolute;
+  right: 24px;
+  top: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(8, 12, 26, 0.55);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .hud .progress {

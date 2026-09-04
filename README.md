@@ -18,8 +18,9 @@ _(after the repo + GitHub Pages are set up — see Deploy)_
 
 1. Enter a name, hit **DRIVE**.
 2. `↑`/`W` throttle · `↓`/`S` brake / reverse · `←`/`→` or `A`/`D` steer ·
-   `Space` handbrake (for drifting corners).
-3. Clear all **3 checkpoints** in order, then cross the finish line.
+   `Space` handbrake (for drifting corners) · `Del`/`Backspace` drops you back
+   at the last checkpoint · `M` mutes the engine.
+3. Clear all the **checkpoints** in order, then cross the finish line.
 4. `R` restarts instantly, from anywhere, any time — no menus. This is the
    whole game: fail fast, go again.
 5. Beat the medal times — **Bronze → Silver → Gold → Author**. Your best run is
@@ -60,7 +61,46 @@ Same **React + Vite** base as the other games, plus a 3D stack:
 - **[`@react-three/rapier`](https://github.com/pmndrs/react-three-rapier)** —
   Rapier 3D physics (WASM). The `<Physics>` world holds the car body, the track
   colliders and the checkpoint/finish sensors.
-- **[`@react-three/drei`](https://github.com/pmndrs/drei)** — just `<Sky>` for now.
+- **[`@react-three/drei`](https://github.com/pmndrs/drei)** — `<Sky>`, plus
+  `<Environment>`/`<Lightformer>` for image-based lighting.
+
+### Looks
+
+Everything is generated at runtime — there are no textures, models or HDRs to
+download, so the whole game is JS.
+
+- **Lighting**: ACES filmic tone mapping, a low warm sun with soft (PCF) 2k
+  shadows, and a small **environment map built in-engine** from a sky sphere and
+  a few `<Lightformer>` panels. That env map is what the car's clear-coated
+  paint, glass and chrome actually reflect — without it, metal reads as flat
+  grey. (`@react-three/postprocessing` was tried for bloom and dropped: with this
+  three.js version its composer double-encodes sRGB and washes the whole image
+  out. Emissive materials plus tone mapping get most of the way there.)
+- **Textures** (`src/game/textures.js`): asphalt (with a matching **normal map**
+  derived from the same noise, so tarmac catches the low sun), grass with mown
+  stadium stripes, kerb stripes, concrete, checkerboard and a smoke puff — all
+  drawn into `<canvas>` once and cached.
+- **The circuit is instanced** (`src/game/trackVisuals.js` + `Boxes.jsx`): road,
+  lane lines, kerbs, barriers, sponsor bands and marker posts are flattened into
+  a handful of `InstancedMesh`es built once at module load, so a restart costs
+  nothing and the whole track is ~10 draw calls. Scenery (treeline, grandstands
+  with crowds, floodlight pylons, distant hills) is instanced the same way.
+- **The car** (`CarModel.jsx`) is procedural geometry: the body is a plan-view
+  outline **extruded and bevelled**, with a canopy, splitter, diffuser, rear
+  wing, and lathed tyres on chromed rims. It's animated from telemetry —
+  wheels steer and spin, the chassis rolls and dives on its springs, and the
+  brake discs and tail light glow under braking.
+- **Effects** (`Effects.jsx`): tyre smoke (a 200-particle `Points` pool with a
+  custom shader) and skid marks (a 420-quad instanced ring buffer) spawn from
+  the rear contact patches whenever the car is sliding.
+- **Feel**: the chase camera pulls back and widens its lens with speed, rolls
+  against cornering load and shakes on a heavy landing; the HUD adds a rev bar,
+  a gear indicator and a vignette that closes in as you get quick.
+- **Audio** (`src/game/audio.js`): fully synthesised — detuned oscillators
+  through a resonant lowpass for the engine (pitch follows a fake 6-speed
+  gearbox), filtered noise for wind, road roar and tyre screech, plus countdown
+  blips and a landing thud. Starts on the DRIVE click (browsers require a
+  gesture); `M` or the HUD button mutes, and the choice is remembered.
 
 ### Key ideas
 
@@ -79,8 +119,20 @@ Same **React + Vite** base as the other games, plus a 3D stack:
   Steering makes the car's **heading chase its velocity direction** plus a slip
   angle: it self-centres, so a knock or a slide reorients the car to face where
   it's going instead of spinning out. Max turn rate tapers with speed. A
-  downward `castRay` (sensors excluded) is the grounded check. Respawn triggers:
-  fell off the world, stuck (<2 m/s for 2 s), or airborne > 1.8 s.
+  downward `castRay` (sensors excluded) is the grounded check. Lateral grip
+  scales with speed (**downforce**), so fast sweepers stay planted while slow
+  corners stay playful, and there's reduced-authority **air steering** to line
+  up a landing. Respawn triggers: fell off the world, stuck (trying to move but
+  under 2 m/s for 2 s), or airborne > 1.8 s.
+- **Telemetry bus** (`src/game/carState.js`): a plain mutable object the physics
+  loop fills each frame — steering, throttle, brake, slip, body g-forces, wheel
+  rotation, gear/rpm, world transform. The car model, the particle effects and
+  the audio engine all read from it, so none of them need React or their own
+  physics queries.
+- **Dev helpers** (dev builds only): `window.__dbg` (per-frame car state),
+  `window.__car`, `window.__hud`, `window.__input`, `window.__progress`,
+  `window.__three` (the R3F state), and `window.__freecam = true` to release the
+  chase camera so you can fly around and inspect things.
 - **The track is generated, but fixed** (`src/game/track.js`). A "turtle" walks a
   ribbon of road tiles from a `course` list of `straight` / `turn` / `ramp` /
   `checkpoint` commands; corners are short straight chords. Consecutive

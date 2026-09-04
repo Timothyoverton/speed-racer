@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { toggleMute } from './audio.js'
 
 const MAP = {
   ArrowUp: 'forward',
@@ -11,6 +12,8 @@ const MAP = {
   KeyD: 'right',
   Space: 'handbrake',
   KeyR: 'restart',
+  Backspace: 'respawn',
+  Delete: 'respawn',
 }
 
 // Shared input state. Touch buttons in App also poke at this object.
@@ -21,6 +24,7 @@ export const input = {
   right: false,
   handbrake: false,
   restart: false,
+  respawn: false,
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -31,11 +35,19 @@ export function useKeyboardInput() {
   const ref = useRef(input)
   useEffect(() => {
     const down = (e) => {
+      if (e.code === 'KeyM' && document.activeElement?.tagName !== 'INPUT') {
+        toggleMute()
+        return
+      }
       const action = MAP[e.code]
       if (!action) return
+      // Backspace in the name field must still delete characters
+      if (action === 'respawn' && document.activeElement?.tagName === 'INPUT') return
       input[action] = true
       // Space + Arrows scroll the page / activate a focused button — block that
-      if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault()
+      if (e.code === 'Space' || e.code.startsWith('Arrow') || action === 'respawn') {
+        e.preventDefault()
+      }
       const el = document.activeElement
       if (el && el.tagName === 'BUTTON') el.blur()
     }

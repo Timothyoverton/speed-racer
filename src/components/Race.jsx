@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import Track from './Track.jsx'
 import Car from './Car.jsx'
 import Ghost from './Ghost.jsx'
+import Effects from './Effects.jsx'
+import { resetCarState } from '../game/carState.js'
 import { TRACK, CHECKPOINT_COUNT } from '../game/track.js'
 import { finishRace } from '../game/store.js'
 import { resetProgress } from '../game/progress.js'
@@ -17,6 +19,7 @@ export default function Race() {
     resetProgress()
     resetHud(CHECKPOINT_COUNT)
     resetTimer()
+    resetCarState()
     activeGhost.frames = loadGhost(TRACK.id)
     return new GhostRecorder()
   }, [])
@@ -41,6 +44,7 @@ export default function Race() {
       <Track onFinish={onFinish} />
       <Ghost />
       <Car recorder={recorder} />
+      <Effects />
     </>
   )
 }

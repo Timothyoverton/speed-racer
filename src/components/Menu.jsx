@@ -3,6 +3,7 @@ import { TRACK } from '../game/track.js'
 import { startCountdown } from '../game/store.js'
 import { bestTime, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
+import { initAudio } from '../game/audio.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
@@ -14,6 +15,7 @@ export default function Menu() {
 
   function drive() {
     setName(name.trim())
+    initAudio() // browsers only allow audio to start from a gesture
     startCountdown()
   }
 
@@ -66,7 +68,8 @@ export default function Menu() {
 
         <div className="hint">
           <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />
-          <kbd>Space</kbd> handbrake &nbsp;·&nbsp; <kbd>R</kbd> restart instantly
+          <kbd>Space</kbd> handbrake &nbsp;·&nbsp; <kbd>R</kbd> restart instantly<br />
+          <kbd>Del</kbd> back to last checkpoint &nbsp;·&nbsp; <kbd>M</kbd> mute
         </div>
       </div>
     </div>

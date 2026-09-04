@@ -8,6 +8,8 @@ export const progress = {
   respawn: null, // { pos:[x,y,z], yaw } — last cleared gate (or start)
 }
 
+if (import.meta.env.DEV && typeof window !== 'undefined') window.__progress = progress
+
 export function resetProgress() {
   progress.next = 0
   progress.respawn = { pos: TRACK.start.pos.slice(), yaw: TRACK.start.yaw }
