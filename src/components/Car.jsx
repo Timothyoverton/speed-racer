@@ -21,9 +21,17 @@ const MAX_SPEED = 62 // ~220 km/h ceiling; real top speed ~175 with drag
 const LIN_DRAG = 0.05 // 1/s
 const QUAD_DRAG = 0.0003 // 1/m
 const GRIP = 12 // lateral bite, 1/s — how tightly velocity tracks heading
-const GRIP_HANDBRAKE = 2.6 // rear steps out but the car keeps its momentum
+const GRIP_HANDBRAKE = 1.4 // rear steps out but the car keeps its momentum
 const AERO_GRIP = 0.75 // extra grip at top speed — downforce, keeps fast corners planted
 const HANDBRAKE_DECEL = 7 // m/s^2 of extra slowing while the handbrake is held
+// The steering authority tapers off with speed. The handbrake gets much higher
+// floors on both taper curves, so grabbing it at 200 km/h still rotates the car
+// — without those, the taper eats the whole effect and nothing happens.
+const SLIP_FLOOR = 0.45
+const SLIP_FLOOR_HANDBRAKE = 0.85
+const YAW_FLOOR = 0.4
+const YAW_FLOOR_HANDBRAKE = 0.95
+const HANDBRAKE_KICK = 0.5 // rad/s of instant rotation the moment you grab it
 const BASE_YAW = 1.6 // rad/s max turn rate (tapers with speed above YAW_REF_SPEED)
 const YAW_REF_SPEED = 13 // m/s
 const YAW_RESPONSE = 10 // how fast yaw rate approaches target
@@ -67,6 +75,7 @@ export default function Car({ recorder }) {
   const prevForward = useRef(0)
   const shake = useRef(0)
   const wasRacing = useRef(false)
+  const hbPrev = useRef(false)
 
   const start = TRACK.start
 
@@ -81,6 +90,7 @@ export default function Car({ recorder }) {
     stuckTimer.current = 0
     airTimer.current = 0
     camInit.current = false
+    hbPrev.current = false
     resetCarState()
   }
 
@@ -175,9 +185,11 @@ export default function Car({ recorder }) {
         impulse.current.addScaledVector(fwd.current, -Math.sign(vForward) * dv)
       }
       // lateral grip — kill sideways slide. Downforce adds bite with speed, so
-      // fast sweepers stay planted while slow hairpins stay playful.
+      // fast sweepers stay planted while slow hairpins stay playful. It does
+      // *not* apply under the handbrake: a locked, sliding tyre has no grip to
+      // press harder onto the road.
       const aero = 1 + Math.min(speed / MAX_SPEED, 1) * AERO_GRIP
-      const grip = (input.handbrake ? GRIP_HANDBRAKE : GRIP) * aero
+      const grip = input.handbrake ? GRIP_HANDBRAKE : GRIP * aero
       impulse.current.addScaledVector(right.current, -vRight * Math.min(1, grip * dt))
     } else {
       impulse.current.addScaledVector(fwd.current, -vForward * 0.05 * dt)
@@ -191,19 +203,30 @@ export default function Car({ recorder }) {
     // (a slip angle). This self-centres — a knock or a slide makes the car
     // reorient to face where it's actually going instead of spinning out.
     const av = b.angvel()
+    const hb = racing && input.handbrake
     if (racing && grounded && speed > TURN_MIN_SPEED) {
       const velHeading = Math.atan2(lv.x, lv.z)
       const carHeading = Math.atan2(fwd.current.x, fwd.current.z)
       const dirSign = vForward < 0 ? -1 : 1
-      const slipMax = input.handbrake ? MAX_SLIP_HANDBRAKE : MAX_SLIP
-      const slip = steer * slipMax * dirSign * THREE.MathUtils.clamp(YAW_REF_SPEED / speed, 0.45, 1.3)
+      const slipMax = hb ? MAX_SLIP_HANDBRAKE : MAX_SLIP
+      const taper = THREE.MathUtils.clamp(
+        YAW_REF_SPEED / speed,
+        hb ? SLIP_FLOOR_HANDBRAKE : SLIP_FLOOR,
+        1.3,
+      )
+      const slip = steer * slipMax * dirSign * taper
       let err = velHeading + slip - carHeading
       err = Math.atan2(Math.sin(err), Math.cos(err)) // wrap to [-pi, pi]
-      const yawCeil = input.handbrake ? BASE_YAW * 1.4 : BASE_YAW
-      const yawCap = THREE.MathUtils.clamp((yawCeil * YAW_REF_SPEED) / speed, 0.4, yawCeil)
+      const yawCeil = hb ? BASE_YAW * 1.4 : BASE_YAW
+      const yawFloor = Math.min(hb ? YAW_FLOOR_HANDBRAKE : YAW_FLOOR, yawCeil)
+      const yawCap = THREE.MathUtils.clamp((yawCeil * YAW_REF_SPEED) / speed, yawFloor, yawCeil)
       const targetYaw = THREE.MathUtils.clamp(err * STEER_SNAP, -yawCap, yawCap)
+      // grabbing the handbrake mid-corner snaps the tail out straight away,
+      // rather than waiting for the yaw rate to ramp
+      let from = av.y
+      if (hb && !hbPrev.current && speed > 8) from += steer * HANDBRAKE_KICK
       const k = 1 - Math.exp(-YAW_RESPONSE * dt)
-      b.setAngvel({ x: 0, y: THREE.MathUtils.lerp(av.y, targetYaw, k), z: 0 }, true)
+      b.setAngvel({ x: 0, y: THREE.MathUtils.lerp(from, targetYaw, k), z: 0 }, true)
     } else if (!grounded && racing) {
       // a bit of air steering to line the landing up, Trackmania-style
       const k = 1 - Math.exp(-4 * dt)
@@ -211,6 +234,8 @@ export default function Car({ recorder }) {
     } else if (grounded) {
       b.setAngvel({ x: 0, y: av.y * (1 - Math.min(1, 10 * dt)), z: 0 }, true)
     }
+
+    hbPrev.current = hb
 
     // ---- telemetry for the model, particles and audio ----------------------
     const wasAir = airTimer.current
