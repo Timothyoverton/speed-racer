@@ -331,6 +331,8 @@ export default function Car({ recorder }) {
 
     if (import.meta.env.DEV) {
       window.__body = b
+      window.__world = world
+      window.__rapier = rapier
       window.__dbg = {
         phase,
         grounded,

@@ -10,6 +10,11 @@ import { clearCheckpoint, allCheckpointsCleared } from '../game/progress.js'
 import { blip } from '../game/audio.js'
 
 const RAIL_H = 0.6 // collider half-height; must stay in step with the visuals
+// The barrier only needs enough length to overlap its neighbour. It must NOT
+// inherit the road's overlap: a rail is straight, so on a corner every extra
+// metre past the chord swings its ends inward across the road — that was an
+// invisible wall up to 43cm inside the visible barrier on the entry line.
+const RAIL_OVERLAP = 0.2
 
 export default function Track({ onFinish }) {
   const finished = useRef(false)
@@ -31,21 +36,20 @@ export default function Track({ onFinish }) {
       <RigidBody type="fixed" colliders={false}>
         {TRACK.slabs.map((slab, i) => {
           const [w, h, l] = slab.size
-          // lone arc chords: pad the road box so consecutive angled slabs
-          // overlap and leave no seam for the car to catch / launch on
-          const pad = slab.span <= 1 ? 2.2 : 0.8
+          // how far this collider may stretch along its length — see padSlabs()
+          const pad = slab.pad
           const rw = TRACK.roadWidth
           return (
             <group key={i} position={slab.pos} rotation={slab.rot}>
               <CuboidCollider args={[w / 2 + pad, h / 2, l / 2 + pad]} friction={0} restitution={0} />
               <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + pad + 0.5]}
+                args={[0.3, RAIL_H, l / 2 + RAIL_OVERLAP]}
                 position={[rw / 2 + 0.3, h / 2 + RAIL_H, 0]}
                 friction={0}
                 restitution={0.55}
               />
               <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + pad + 0.5]}
+                args={[0.3, RAIL_H, l / 2 + RAIL_OVERLAP]}
                 position={[-rw / 2 - 0.3, h / 2 + RAIL_H, 0]}
                 friction={0}
                 restitution={0.55}

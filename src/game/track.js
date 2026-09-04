@@ -7,6 +7,8 @@
 
 const ROAD_THICK = 1.6
 const TILE_LEN = 6 // target length of a single straight chord
+const RAMP_TILE_LEN = 2 // elevation changes get much shorter slices, so the
+// eased profile below reads as a curve rather than a set of steps
 const DEG = Math.PI / 180
 
 function dirOf(heading) {
@@ -33,12 +35,17 @@ class Turtle {
     const cx = this.x + (dx * len) / 2
     const cz = this.z + (dz * len) / 2
     const rise = Math.tan(pitch) * len
-    // place the tile so its top surface sits at the turtle's current height
-    const cy = this.y + rise / 2 - ROAD_THICK / 2
+    const cosP = Math.cos(pitch)
+    // Drop the box by half its thickness measured PERPENDICULAR to the road,
+    // not vertically, so the top face lands exactly on the intended line. With
+    // the plain vertical offset a pitched tile's surface sits ~1.5cm proud.
+    const cy = this.y + rise / 2 - ROAD_THICK / 2 / cosP
     this.tiles.push({
       pos: [cx, cy, cz],
       rot: [pitch, this.heading, 0],
-      size: [this.w, ROAD_THICK, len],
+      // `len` is the horizontal run; the box has to be the longer SLOPE length
+      // or consecutive pitched slices fall short of each other and leave a gap
+      size: [this.w, ROAD_THICK, len / cosP],
       // 0 straight, +1 mid-left-hander, -1 mid-right-hander — drives kerbs
       curve,
       dist: this.dist,
@@ -59,13 +66,19 @@ class Turtle {
     return this
   }
 
+  // Elevation change with an eased (smoothstep) height profile: dead flat where
+  // it meets the road at both ends, steepest in the middle. A constant-pitch
+  // ramp puts a hard kink at the bottom and the crest, and the crest is where
+  // the car catches. Sliced fine enough that the easing reads as a curve.
   ramp(dist, rise) {
-    const pitch = Math.atan2(rise, dist)
-    let remaining = dist
-    while (remaining > 0.01) {
-      const seg = Math.min(TILE_LEN, remaining)
-      this._placeTile(seg, pitch)
-      remaining -= seg
+    const steps = Math.max(2, Math.ceil(dist / RAMP_TILE_LEN))
+    const seg = dist / steps
+    const smooth = (t) => t * t * (3 - 2 * t)
+    let prevH = 0
+    for (let i = 0; i < steps; i++) {
+      const h = rise * smooth((i + 1) / steps)
+      this._placeTile(seg, Math.atan2(h - prevH, seg))
+      prevH = h
     }
     return this
   }
@@ -124,7 +137,7 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     tiles: t.tiles,
     // Merged collider slabs: consecutive tiles with the same orientation become
     // one long box, so straights have no seams for the car to catch on.
-    slabs: mergeTiles(t.tiles),
+    slabs: padSlabs(mergeTiles(t.tiles)),
     checkpoints: t.checkpoints,
     start: t.start,
     finish: t.finish,
@@ -173,8 +186,26 @@ function mergeTiles(tiles) {
       // how many tiles this slab covers — 1 means it's a lone arc chord that
       // needs extra collider overlap to keep the surface seamless
       span: s.tiles.length,
+      pitch,
     }
   })
+}
+
+// How far each collider may be stretched along its own length.
+//
+// Overlapping neighbours is what keeps a corner's arc chords seamless — they
+// all sit at the same height, so overlap costs nothing. Do it to a slab that is
+// pitched (or that abuts one) and the stretched end carries on up the slope,
+// poking through the road beyond it: that was a 9cm lip at the top of every
+// rise, and exactly the sort of edge a frictionless car catches on.
+function padSlabs(slabs) {
+  const pitched = (s) => s && Math.abs(s.pitch) > 1e-6
+  for (let i = 0; i < slabs.length; i++) {
+    const s = slabs[i]
+    if (pitched(s) || pitched(slabs[i - 1]) || pitched(slabs[i + 1])) s.pad = 0
+    else s.pad = s.span <= 1 ? 2.2 : 0.8
+  }
+  return slabs
 }
 
 // --- Track 0: a wide, forgiving test pad ------------------------------------
@@ -234,4 +265,6 @@ export const TRACKS = [TEST_PAD, STADIUM_SPRINT]
 
 // Active track. Swap to STADIUM_SPRINT (or TRACKS[1]) once the dynamics feel good.
 export const TRACK = TEST_PAD
+
+if (import.meta.env.DEV && typeof window !== 'undefined') window.__track = TRACK
 export const CHECKPOINT_COUNT = TRACK.checkpoints.length
