@@ -64,9 +64,9 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.line} material={mats.line} />
       <Boxes items={VISUALS.dash} material={mats.line} />
       <Boxes items={VISUALS.kerb} material={mats.kerb} receiveShadow />
-      <Boxes items={VISUALS.wall} material={mats.concrete} castShadow receiveShadow />
-      <Boxes items={VISUALS.stripeR} material={mats.stripeR} />
-      <Boxes items={VISUALS.stripeL} material={mats.stripeL} />
+      <Boxes items={VISUALS.wall} colors={VISUALS.wallColor} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.stripeR} colors={VISUALS.stripeRColor} material={mats.stripeR} />
+      <Boxes items={VISUALS.stripeL} colors={VISUALS.stripeLColor} material={mats.stripeL} />
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
       <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />

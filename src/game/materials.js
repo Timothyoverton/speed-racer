@@ -58,15 +58,15 @@ export function trackMaterials() {
       metalness: 0.02,
     }),
     stripeR: new THREE.MeshStandardMaterial({
-      color: '#1f7fd0',
+      color: '#ffffff', // tinted per instance
       emissive: '#2f9bff',
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.12,
       roughness: 0.4,
     }),
     stripeL: new THREE.MeshStandardMaterial({
-      color: '#c22b39',
+      color: '#ffffff', // tinted per instance
       emissive: '#ff3b4d',
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.12,
       roughness: 0.4,
     }),
     post: new THREE.MeshStandardMaterial({ color: '#7e8794', roughness: 0.6, metalness: 0.5 }),

@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef } from 'react'
 import * as THREE from 'three'
 
+const col = new THREE.Color()
+
 const o = new THREE.Object3D()
 
-function useInstanceMatrices(ref, items) {
+function useInstanceMatrices(ref, items, colors) {
   useLayoutEffect(() => {
     const mesh = ref.current
     if (!mesh) return
@@ -16,14 +18,19 @@ function useInstanceMatrices(ref, items) {
       mesh.setMatrixAt(i, o.matrix)
     }
     mesh.instanceMatrix.needsUpdate = true
+    // per-instance tint, so one mesh can carry a whole palette
+    if (colors && colors.length === items.length) {
+      for (let i = 0; i < colors.length; i++) mesh.setColorAt(i, col.set(colors[i]))
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    }
     mesh.computeBoundingSphere()
-  }, [ref, items])
+  }, [ref, items, colors])
 }
 
 // One InstancedMesh from a list of { p, r, s } box transforms.
-export default function Boxes({ items, material, castShadow = false, receiveShadow = false }) {
+export default function Boxes({ items, material, colors, castShadow = false, receiveShadow = false }) {
   const ref = useRef(null)
-  useInstanceMatrices(ref, items)
+  useInstanceMatrices(ref, items, colors)
 
   if (!items.length) return null
 

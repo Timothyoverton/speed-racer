@@ -10,6 +10,13 @@ const WALL_H = 1.35
 const KERB_W = 1.6
 const LINE_INSET = 1.5
 
+// Sponsor bands. One flat colour for a kilometre of barrier reads as a corridor
+// of wallpaper, so the shade steps every few tiles — cool down the right, warm
+// down the left, which keeps the side cue while breaking up the repetition.
+const BAND_COOL = ['#1f7fd0', '#1c9ad0', '#2f62e0', '#17a8b8']
+const BAND_WARM = ['#c22b39', '#d1452b', '#e0641b', '#b0305f']
+const BAND_EVERY = 6 // tiles
+
 const dummy = new THREE.Object3D()
 
 function tileSpace(tile) {
@@ -36,6 +43,9 @@ function build(track) {
   const post = []
   const chevronL = []
   const chevronR = []
+  const stripeLColor = []
+  const stripeRColor = []
+  const wallColor = []
 
   const rw = track.roadWidth
   const th = track.roadThick
@@ -70,12 +80,18 @@ function build(track) {
     // barriers — a concrete base with an emissive sponsor band on the inner face
     for (const s of [1, -1]) {
       place(wall, tile, [s * (rw / 2 + WALL_W / 2), top + WALL_H / 2, 0], [WALL_W, WALL_H, len + 0.04])
+      // a touch of tonal variety so the concrete isn't one flat grey
+      const shade = 0.9 + ((i * 7919) % 100) / 500
+      wallColor.push(`rgb(${Math.round(255 * shade)},${Math.round(255 * shade)},${Math.round(255 * shade)})`)
+      const band = Math.floor(i / BAND_EVERY)
       place(
         s > 0 ? stripeR : stripeL,
         tile,
         [s * (rw / 2 + 0.03), top + WALL_H - 0.28, 0],
         [0.08, 0.3, len + 0.04],
       )
+      if (s > 0) stripeRColor.push(BAND_COOL[band % BAND_COOL.length])
+      else stripeLColor.push(BAND_WARM[band % BAND_WARM.length])
     }
 
     // Chevron boards on the OUTSIDE of a corner, on the way in — the visual
@@ -102,7 +118,10 @@ function build(track) {
     }
   })
 
-  return { road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR }
+  return {
+    road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
+    stripeLColor, stripeRColor, wallColor,
+  }
 }
 
 export const VISUALS = build(TRACK)
