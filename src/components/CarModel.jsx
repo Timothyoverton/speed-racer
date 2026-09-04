@@ -243,11 +243,14 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
   const mat = useMaterials(ghost, color)
 
   const chassis = useRef(null)
+  const attitude = useRef(null)
   const fl = useRef(null)
   const fr = useRef(null)
   const spin = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const roll = useRef(0)
   const pitch = useRef(0)
+  const gPitch = useRef(0)
+  const gRoll = useRef(0)
 
   useFrame((_, delta) => {
     if (!live) return
@@ -264,6 +267,15 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       chassis.current.rotation.z = roll.current
       chassis.current.rotation.x = pitch.current
       chassis.current.position.y = -Math.abs(roll.current) * 0.12
+    }
+
+    // lay the whole car (wheels included) along the road surface
+    const gk = 1 - Math.exp(-12 * dt)
+    gPitch.current = THREE.MathUtils.lerp(gPitch.current, s.groundPitch, gk)
+    gRoll.current = THREE.MathUtils.lerp(gRoll.current, s.groundRoll, gk)
+    if (attitude.current) {
+      attitude.current.rotation.x = -gPitch.current
+      attitude.current.rotation.z = -gRoll.current
     }
 
     // front wheels follow the steering input
@@ -283,7 +295,7 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
   })
 
   return (
-    <group>
+    <group ref={attitude}>
       <group ref={chassis}>
         {/* main body */}
         <mesh geometry={geo.bodyGeo} position={[0, -0.3, 0]} castShadow receiveShadow>

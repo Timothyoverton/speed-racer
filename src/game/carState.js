@@ -19,6 +19,9 @@ export const carState = {
   slip: 0, // 0..1 how sideways the car is going
   grounded: true,
   airTime: 0,
+  // how the road under the car is tilted, in the car's own axes (radians)
+  groundPitch: 0,
+  groundRoll: 0,
 
   // drivetrain (for HUD + audio; does not feed the physics directly)
   gear: 1,
@@ -49,6 +52,8 @@ export function resetCarState() {
     slip: 0,
     grounded: true,
     airTime: 0,
+    groundPitch: 0,
+    groundRoll: 0,
     gear: 1,
     rpm: 900,
     rpm01: 0,

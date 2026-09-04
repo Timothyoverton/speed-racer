@@ -141,13 +141,27 @@ export default function Car({ recorder }) {
 
     const NO_SENSORS = rapier.QueryFilterFlags?.EXCLUDE_SENSORS
 
-    // ground probe
+    // ground probe — also grabs the surface normal, so the car can be laid
+    // along the road it's actually on. The rigid body is locked to yaw (that's
+    // what keeps the handling model sane), so without this the car stays dead
+    // level going over a crest while the road tips away underneath it.
     let grounded = false
+    let surfacePitch = 0
+    let surfaceRoll = 0
     try {
       rayOrigin.current.set(t.x, t.y + 0.3, t.z)
       const ray = new rapier.Ray(rayOrigin.current, DOWN)
-      const hit = world.castRay(ray, 1.0, true, NO_SENSORS, undefined, undefined, b)
+      const hit = world.castRayAndGetNormal
+        ? world.castRayAndGetNormal(ray, 1.0, true, NO_SENSORS, undefined, undefined, b)
+        : world.castRay(ray, 1.0, true, NO_SENSORS, undefined, undefined, b)
       grounded = !!hit
+      const n = hit && hit.normal
+      if (n) {
+        const alongFwd = n.x * fwd.current.x + n.z * fwd.current.z
+        const alongRight = n.x * right.current.x + n.z * right.current.z
+        surfacePitch = Math.asin(THREE.MathUtils.clamp(-alongFwd, -1, 1))
+        surfaceRoll = Math.asin(THREE.MathUtils.clamp(alongRight, -1, 1))
+      }
     } catch {
       grounded = t.y < 1.4
     }
@@ -291,6 +305,14 @@ export default function Car({ recorder }) {
     carState.vForward = vForward
     carState.vRight = vRight
     carState.grounded = grounded
+    if (grounded) {
+      carState.groundPitch = surfacePitch
+      carState.groundRoll = surfaceRoll
+    } else {
+      // in the air, ease back towards level instead of holding the launch angle
+      carState.groundPitch *= 1 - Math.min(1, 1.5 * dt)
+      carState.groundRoll *= 1 - Math.min(1, 1.5 * dt)
+    }
     carState.airTime = airTimer.current
     carState.reversing = vForward < -0.5
     carState.slip = speed > 2 ? Math.min(Math.abs(vRight) / Math.max(speed, 6), 1) : 0
