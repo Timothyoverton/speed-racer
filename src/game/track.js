@@ -93,6 +93,23 @@ class Turtle {
     return this
   }
 
+  // A kicker. Eased on at the bottom like a ramp — nothing to catch on — but it
+  // leaves at FULL slope instead of flattening off, so you actually take off.
+  // (`ramp` eases both ends, which is what you want for a hill and is exactly
+  // what stops it launching you.) Exit angle is atan(2 * rise / dist).
+  jump(dist, rise) {
+    const steps = Math.max(2, Math.ceil(dist / RAMP_TILE_LEN))
+    const seg = dist / steps
+    let prevH = 0
+    for (let i = 0; i < steps; i++) {
+      const t = (i + 1) / steps
+      const h = rise * t * t // quadratic: flat at the bottom, steepest at the lip
+      this._placeTile(seg, Math.atan2(h - prevH, seg))
+      prevH = h
+    }
+    return this
+  }
+
   // angle in degrees, +ve turns left, radius in metres
   turn(angleDeg, radius) {
     const total = Math.abs(angleDeg) * DEG
@@ -137,6 +154,7 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     else if (cmd === 'checkpoint') t.checkpoint()
     else if (cmd === 'straight') t.straight(a)
     else if (cmd === 'ramp') t.ramp(a, b)
+    else if (cmd === 'jump') t.jump(a, b)
     else if (cmd === 'turn') t.turn(a, b)
   }
   return {
@@ -233,7 +251,7 @@ const TEST_PAD = buildTrack({
     ['checkpoint'],
     ['turn', 120, 48], // big, lazy left
     ['straight', 46],
-    ['ramp', 22, 2.8], // gentle launch
+    ['jump', 24, 2.0], // kicker — leaves at ~9.5deg, good for a few car lengths
     ['straight', 34],
     ['checkpoint'],
     ['turn', 110, 48], // big, lazy left back around
@@ -272,43 +290,45 @@ const STADIUM_SPRINT = buildTrack({
   ],
 })
 
-// --- Track 2: Nations Sprint -------------------------------------------------
-// A homage to the classic Nations stadium sprint, not a copy of it: fast
-// opening straight, a crest to get light over, a quick chicane, a long
-// sweeper, and a run to the line. Point-to-point, like the originals.
-const NATIONS_SPRINT = buildTrack({
-  id: 'nations-sprint-2',
-  name: 'Nations Sprint',
-  roadWidth: 16,
+// --- Track 2: Qiddiya Rush ---------------------------------------------------
+// Modelled on the Trackmania Qiddiya City map — its character, not its layout:
+// wide fast asphalt, a long opening sweeper, a crest into a drop, a flowing
+// right-left, and a net downhill run to the line. Point to point.
+//
+// The real one's signature is the banked wall the road sweeps up into. Banking
+// isn't in this DSL yet (corners are flat) and adding it means letting the car
+// roll, which is currently locked — so this is the flat interpretation.
+const QIDDIYA_RUSH = buildTrack({
+  id: 'qiddiya-rush-2',
+  name: 'Qiddiya Rush',
+  roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 34000, gold: 39000, silver: 46000, bronze: 56000 },
+  medals: { author: 33000, gold: 38000, silver: 45000, bronze: 55000 },
   course: [
     ['start'],
-    ['straight', 60], // launch straight, hard on the throttle
-    ['turn', -55, 34], // fast right, taken flat
-    ['straight', 24],
+    ['straight', 70], // long run-up, flat out
+    ['turn', -40, 60], // opening sweeper, barely lift
+    ['straight', 30],
     ['checkpoint'],
-    ['ramp', 18, 3.2], // up over the crest
-    ['straight', 12],
-    ['ramp', 16, -3.2], // and back down
-    ['straight', 20],
-    ['turn', 80, 22], // into the chicane
-    ['straight', 18],
-    ['turn', -95, 18], // and out of it
-    ['checkpoint'],
+    ['jump', 26, 2.2], // kicker over the crest
+    ['straight', 16],
+    ['ramp', 24, -3.4], // and down the far side, steeper than the climb
+    ['turn', -85, 30], // fast right off the bottom
     ['straight', 34],
-    ['turn', -120, 26], // long right-hand sweeper
-    ['straight', 40],
-    ['turn', 90, 20], // tight left
-    ['straight', 26],
     ['checkpoint'],
-    ['turn', -70, 30],
-    ['straight', 70], // run to the line
+    ['turn', 70, 26], // left
+    ['straight', 22],
+    ['turn', -60, 24], // straight back into a right
+    ['straight', 40],
+    ['ramp', 20, -1.8], // descending
+    ['checkpoint'],
+    ['turn', 100, 34], // long left onto the final straight
+    ['straight', 80],
     ['finish'],
   ],
 })
 
-export const TRACKS = [TEST_PAD, STADIUM_SPRINT, NATIONS_SPRINT]
+export const TRACKS = [TEST_PAD, STADIUM_SPRINT, QIDDIYA_RUSH]
 
 const TRACK_KEY = 'speed-racer:track'
 
