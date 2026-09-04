@@ -86,6 +86,13 @@ function build(track) {
 }
 
 export const VISUALS = build(TRACK)
+
+// Where the grass sits. Tracks can descend — Qiddiya Rush nets 3m down — and a
+// fixed ground plane then covers the road and you drive along under the lawn.
+// Sit it just under the LOWEST bit of road, so the low point is bedded into the
+// ground exactly as before and anything higher is a raised ribbon above it.
+// (Flat tracks land on -0.9, which is what this was hard-coded to.)
+export const GROUND_Y = Math.min(...TRACK.tiles.map((t) => t.pos[1])) - 0.1
 export const BARRIER = { WALL_W, WALL_H }
 
 // centre + extent of the whole course, for aiming lights and placing scenery

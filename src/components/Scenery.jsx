@@ -4,7 +4,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import Boxes, { Shapes } from './Boxes.jsx'
-import { BOUNDS } from '../game/trackVisuals.js'
+import { BOUNDS, GROUND_Y } from '../game/trackVisuals.js'
 import { trackMaterials } from '../game/materials.js'
 
 function rng(seed) {
@@ -22,6 +22,9 @@ export default function Scenery() {
   const mats = useMemo(() => trackMaterials(), [])
   const [cx, , cz] = BOUNDS.center
   const R = BOUNDS.radius
+  // scenery was authored against a ground plane at -0.9; keep it planted on the
+  // ground wherever that now sits
+  const gy = GROUND_Y + 0.9
 
   const extra = useMemo(() => {
     const r = rng(1337)
@@ -41,8 +44,8 @@ export default function Scenery() {
       const z = cz + Math.sin(a) * rad
       const h = 5 + r() * 7
       const w = 2.2 + r() * 1.8
-      trunks.push({ p: [x, h * 0.22, z], r: [0, r() * 3, 0], s: [0.5, h * 0.45, 0.5] })
-      canopies.push({ p: [x, h * 0.72, z], r: [0, r() * 3, 0], s: [w, h * 0.95, w] })
+      trunks.push({ p: [x, gy + h * 0.22, z], r: [0, r() * 3, 0], s: [0.5, h * 0.45, 0.5] })
+      canopies.push({ p: [x, gy + h * 0.72, z], r: [0, r() * 3, 0], s: [w, h * 0.95, w] })
     }
 
     // grandstands on the two long sides
@@ -61,7 +64,7 @@ export default function Scenery() {
         const dx = Math.sin(s.rot) * off
         const dz = Math.cos(s.rot) * off
         stands.push({
-          p: [s.x - dx, h / 2, s.z - dz],
+          p: [s.x - dx, gy + h / 2, s.z - dz],
           r: [0, s.rot, 0],
           s: [70, h, depth],
         })
@@ -71,7 +74,7 @@ export default function Scenery() {
           const ax = s.x - dx + Math.cos(s.rot) * along
           const az = s.z - dz - Math.sin(s.rot) * along
           crowd.push({
-            p: [ax, h + 0.5, az],
+            p: [ax, gy + h + 0.5, az],
             r: [0, s.rot, 0],
             s: [1.1, 1.0, 1.1],
           })
@@ -84,8 +87,8 @@ export default function Scenery() {
       const a = (i / 8) * Math.PI * 2 + 0.3
       const x = cx + Math.cos(a) * (R + 46)
       const z = cz + Math.sin(a) * (R + 46)
-      masts.push({ p: [x, 15, z], r: [0, -a, 0], s: [1.0, 30, 1.0] })
-      heads.push({ p: [x, 30.5, z], r: [0, -a, 0], s: [9, 3.4, 1.2] })
+      masts.push({ p: [x, gy + 15, z], r: [0, -a, 0], s: [1.0, 30, 1.0] })
+      heads.push({ p: [x, gy + 30.5, z], r: [0, -a, 0], s: [9, 3.4, 1.2] })
     }
 
     // distant hills, well past everything else
@@ -94,14 +97,14 @@ export default function Scenery() {
       const rad = 620 + r() * 260
       const s = 120 + r() * 220
       hills.push({
-        p: [cx + Math.cos(a) * rad, -10, cz + Math.sin(a) * rad],
+        p: [cx + Math.cos(a) * rad, gy - 10, cz + Math.sin(a) * rad],
         r: [0, r() * 6, 0],
         s: [s, s * (0.22 + r() * 0.18), s],
       })
     }
 
     return { trunks, canopies, stands, crowd, masts, heads, hills }
-  }, [cx, cz, R])
+  }, [cx, cz, R, gy])
 
   const geos = useMemo(
     () => ({
@@ -130,7 +133,7 @@ export default function Scenery() {
   return (
     <group>
       {/* ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.9, cz]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, GROUND_Y, cz]} receiveShadow>
         <planeGeometry args={[2600, 2600]} />
         <primitive object={mats.grass} attach="material" />
       </mesh>

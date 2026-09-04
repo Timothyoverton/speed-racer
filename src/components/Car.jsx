@@ -10,6 +10,7 @@ import { hud } from '../game/hud.js'
 import { elapsedMs } from '../game/timing.js'
 import { progress } from '../game/progress.js'
 import { activeGhost, ghostTimeAtPosition } from '../game/ghost.js'
+import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
 import { updateAudio, idleAudio, thud, initAudio } from '../game/audio.js'
 
@@ -49,7 +50,9 @@ const CAM_HEIGHT = 3.5
 const CAM_LOOKAHEAD = 12
 const FOV_BASE = 60
 const FOV_GAIN = 24
-const RESPAWN_Y = -6
+// fell off the world — relative to the track floor, since a descending track
+// would otherwise cross a fixed threshold while still on the road
+const RESPAWN_Y = GROUND_Y - 5
 const STUCK_TIME = 2.0
 
 const UP = new THREE.Vector3(0, 1, 0)
