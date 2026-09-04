@@ -34,6 +34,8 @@ function build(track) {
   const stripeL = []
   const stripeR = []
   const post = []
+  const chevronL = []
+  const chevronR = []
 
   const rw = track.roadWidth
   const th = track.roadThick
@@ -76,6 +78,22 @@ function build(track) {
       )
     }
 
+    // Chevron boards on the OUTSIDE of a corner, on the way in — the visual
+    // cue that the road is about to turn, before you can see how much.
+    const prev = track.tiles[i - 1]
+    const enteringCorner = tile.curve && (!prev || !prev.curve)
+    if (enteringCorner) {
+      const outside = -tile.curve
+      for (let k = 0; k < 3; k++) {
+        place(
+          tile.curve > 0 ? chevronR : chevronL,
+          tile,
+          [outside * (rw / 2 + WALL_W + 0.9), top + 1.5, -k * 7 - 2],
+          [2.6, 1.7, 0.18],
+        )
+      }
+    }
+
     // marker posts every few tiles, outside the barrier
     if (i % 4 === 0) {
       for (const s of [1, -1]) {
@@ -84,7 +102,7 @@ function build(track) {
     }
   })
 
-  return { road, line, dash, kerb, wall, stripeL, stripeR, post }
+  return { road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR }
 }
 
 export const VISUALS = build(TRACK)

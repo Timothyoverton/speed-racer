@@ -4,6 +4,7 @@
 import * as THREE from 'three'
 import {
   asphaltMap,
+  chevronMap,
   asphaltNormal,
   concreteMap,
   grassMap,
@@ -71,6 +72,17 @@ export function trackMaterials() {
     post: new THREE.MeshStandardMaterial({ color: '#7e8794', roughness: 0.6, metalness: 0.5 }),
     metal: new THREE.MeshStandardMaterial({ color: '#98a1ae', roughness: 0.35, metalness: 0.9 }),
     grass: new THREE.MeshStandardMaterial({ map: grass, roughness: 1, metalness: 0 }),
+    chevronL: new THREE.MeshStandardMaterial({ map: chevronMap(), roughness: 0.6 }),
+    chevronR: new THREE.MeshStandardMaterial({
+      map: (() => {
+        const m = chevronMap().clone()
+        m.needsUpdate = true
+        m.wrapS = THREE.RepeatWrapping
+        m.repeat.x = -1 // same artwork, arrows pointing the other way
+        return m
+      })(),
+      roughness: 0.6,
+    }),
     checker: new THREE.MeshStandardMaterial({
       map: checkerMap(),
       roughness: 0.7,

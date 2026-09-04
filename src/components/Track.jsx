@@ -68,6 +68,8 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.stripeR} material={mats.stripeR} />
       <Boxes items={VISUALS.stripeL} material={mats.stripeL} />
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
+      <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
+      <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
 
       {/* start / finish road markings */}
       <RoadDecal

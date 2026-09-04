@@ -178,6 +178,39 @@ export function kerbMap() {
   })
 }
 
+// ---------------------------------------------------------- chevron board ---
+// The yellow arrow boards that sit on the outside of a corner, warning you the
+// road is about to turn. Drawn pointing left; the right-hand version reuses the
+// same canvas with the map mirrored.
+export function chevronMap() {
+  return make('chevron', () => {
+    const N = 256
+    const [c, g] = canvas(N)
+    g.fillStyle = '#f2c500'
+    g.fillRect(0, 0, N, N)
+    g.fillStyle = '#14161d'
+    g.lineWidth = 0
+    const arrows = 3
+    for (let a = 0; a < arrows; a++) {
+      const x0 = (a * N) / arrows
+      const w = N / arrows
+      g.beginPath()
+      g.moveTo(x0 + w * 0.75, N * 0.12)
+      g.lineTo(x0 + w * 0.3, N * 0.5)
+      g.lineTo(x0 + w * 0.75, N * 0.88)
+      g.lineTo(x0 + w * 0.95, N * 0.88)
+      g.lineTo(x0 + w * 0.5, N * 0.5)
+      g.lineTo(x0 + w * 0.95, N * 0.12)
+      g.closePath()
+      g.fill()
+    }
+    g.strokeStyle = '#14161d'
+    g.lineWidth = 10
+    g.strokeRect(5, 5, N - 10, N - 10)
+    return toTexture(c)
+  })
+}
+
 // ---------------------------------------------------------------- checker ---
 export function checkerMap() {
   return make('checker', () => {
