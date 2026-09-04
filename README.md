@@ -139,6 +139,24 @@ download, so the whole game is JS.
   corners stay playful, and there's reduced-authority **air steering** to line
   up a landing. Respawn triggers: fell off the world, stuck (trying to move but
   under 2 m/s for 2 s), or airborne > 1.8 s.
+- **Friction circle**: grip spent cornering isn't available to accelerate,
+  scaled by `(latG / 2.2)^2` against a 25% floor. Straight-line acceleration is
+  untouched; at 160 km/h on full lock the car scrubs speed rather than gaining
+  it. Without it you could pull 2 g and still accelerate at ~90% of the
+  straight-line rate.
+- **The car lies along the road.** The body is locked to yaw, so the ground
+  probe resolves the surface normal into pitch and roll in the car's own axes
+  and the *model* is laid along it — otherwise the car stays dead level going
+  over a crest. Purely visual; the physics body is untouched.
+- **`ramp` vs `jump`**: a ramp eases at both ends (a hill — smooth on, smooth
+  off), a jump eases on at the bottom and leaves at full slope so it launches
+  you. Easing both ends is exactly what stops a ramp launching you, which is
+  worth knowing before "fixing" one into the other.
+- **Pitch is applied about the road's own lateral axis** (YXZ euler, negated).
+  In three's default XYZ order the pitch term is applied last, about the *world*
+  X axis, which tilts a road by `-cos(yaw) * sin(pitch)` — inverted, and scaled
+  by heading. That produced a sawtooth surface with ~1 m steps on any track not
+  running along +Z.
 - **Telemetry bus** (`src/game/carState.js`): a plain mutable object the physics
   loop fills each frame — steering, throttle, brake, slip, body g-forces, wheel
   rotation, gear/rpm, world transform. The car model, the particle effects and
