@@ -1,0 +1,74 @@
+import { useState } from 'react'
+import { TRACK } from '../game/track.js'
+import { startCountdown } from '../game/store.js'
+import { bestTime, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
+import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
+
+const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
+
+export default function Menu() {
+  const [name, setNameState] = useState(getName())
+  const pb = bestTime(TRACK.id)
+  const board = topTimes(TRACK.id)
+  const pbMedal = pb != null ? medalFor(pb, TRACK.medals) : null
+
+  function drive() {
+    setName(name.trim())
+    startCountdown()
+  }
+
+  return (
+    <div className="overlay">
+      <div className="panel">
+        <div className="title">SPEED RACER</div>
+        <div className="subtitle">{TRACK.name} — chase the track record</div>
+
+        <div style={{ marginTop: 18 }}>
+          <div className="row">
+            <span className="label">Your best</span>
+            <span className="value">
+              {pb != null ? formatTime(pb) : '—'}{' '}
+              {pbMedal && pbMedal !== 'none' && (
+                <span className={`medal-badge ${pbMedal}`}>{MEDAL_ICON[pbMedal]}</span>
+              )}
+            </span>
+          </div>
+          {MEDAL_ORDER.map((m) => (
+            <div className="row" key={m}>
+              <span className="label">
+                <span className={`medal-badge ${m}`}>{MEDAL_ICON[m]} {MEDAL_LABEL[m]}</span>
+              </span>
+              <span className="value">{formatTime(TRACK.medals[m])}</span>
+            </div>
+          ))}
+        </div>
+
+        {board.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div className="subtitle" style={{ marginBottom: 4 }}>Local leaderboard</div>
+            {board.slice(0, 5).map((e, i) => (
+              <div className="row" key={i}>
+                <span className="label">{i + 1}. {e.name}</span>
+                <span className="value">{formatTime(e.timeMs)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          className="name"
+          placeholder="Your name"
+          maxLength={16}
+          value={name}
+          onChange={(e) => setNameState(e.target.value)}
+        />
+        <button className="cta" onClick={drive}>DRIVE</button>
+
+        <div className="hint">
+          <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />
+          <kbd>Space</kbd> handbrake &nbsp;·&nbsp; <kbd>R</kbd> restart instantly
+        </div>
+      </div>
+    </div>
+  )
+}

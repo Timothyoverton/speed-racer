@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "speed-racer",
+      "runtimeExecutable": "/home/tom/src/speed-racer/.claude/run-dev.sh",
+      "runtimeArgs": [],
+      "port": 5175,
+      "autoPort": true
+    }
+  ]
+}
