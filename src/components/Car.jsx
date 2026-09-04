@@ -145,7 +145,8 @@ export default function Car({ recorder }) {
     // The car heading chases its *velocity direction* plus a steering offset
     // (a slip angle). This self-centres — a knock or a slide makes the car
     // reorient to face where it's actually going instead of spinning out.
-    const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+    // +1 = steering left (toward +X / screen-left with the chase camera)
+    const steer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
     const av = b.angvel()
     if (racing && grounded && speed > TURN_MIN_SPEED) {
       const velHeading = Math.atan2(lv.x, lv.z)
