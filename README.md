@@ -1,8 +1,13 @@
 # Speed Racer
 
-A Trackmania-style time-attack racer for the browser. One track, one goal:
-grind it until you own the record. 3D, behind-the-car camera, instant restart,
-your ghost racing alongside you.
+A Trackmania-style time-attack racer for the browser. Grind a track until you
+own the record. 3D, behind-the-car camera, instant restart, your ghost racing
+alongside you.
+
+Currently ships with **Track 0 "Test Pad"** — a wide, forgiving loop (long
+straight, two big sweepers, a gentle jump) for dialling in the car. The real
+track, **Stadium Sprint**, is built and waiting as `TRACKS[1]` in
+`src/game/track.js`; change the `TRACK` export there to switch.
 
 ## Play Now
 
@@ -66,18 +71,24 @@ Same **React + Vite** base as the other games, plus a 3D stack:
     and paints straight into refs. Zero re-renders while driving.
   - `src/game/store.js` is a tiny `useSyncExternalStore` for coarse state only
     (`phase`, `runId`, `result`).
-- **Arcade car handling** (`src/components/Car.jsx`): one dynamic `RigidBody`
-  with pitch/roll locked (`enabledRotations={[false,true,false]}`) so it can't
-  flip. Each frame we decompose velocity into forward / lateral, apply engine +
-  drag to the forward part, kill most of the lateral part (that's "grip" —
-  handbrake reduces it so the car drifts), then write the recomposed velocity
-  back with `setLinvel`, preserving `y` so gravity and ramp launches still work.
-  A downward `world.castRay` gives the grounded check.
+- **Arcade car handling** (`src/components/Car.jsx`): one dynamic `RigidBody`,
+  **frictionless collider**, pitch/roll locked so it can't flip. All handling is
+  done in code as mass-scaled impulses — engine (tapering to `MAX_SPEED`), drag,
+  and lateral **grip** (handbrake cuts grip → drift) — so Rapier's own collision
+  response still bounces the car off the barriers (which have `restitution`).
+  Steering makes the car's **heading chase its velocity direction** plus a slip
+  angle: it self-centres, so a knock or a slide reorients the car to face where
+  it's going instead of spinning out. Max turn rate tapers with speed. A
+  downward `castRay` (sensors excluded) is the grounded check. Respawn triggers:
+  fell off the world, stuck (<2 m/s for 2 s), or airborne > 1.8 s.
 - **The track is generated, but fixed** (`src/game/track.js`). A "turtle" walks a
-  ribbon of road tiles from a list of `straight` / `turn` / `ramp` commands;
-  corners are short straight chords so tile edges line up. Editing the course =
-  editing the `COURSE` block. All tile + rail colliders live in one static
-  `RigidBody`.
+  ribbon of road tiles from a `course` list of `straight` / `turn` / `ramp` /
+  `checkpoint` commands; corners are short straight chords. Consecutive
+  same-orientation tiles are then **merged into single long collider slabs** so
+  straights have no seams for the frictionless car to trip on; lone arc chords
+  get padded colliders to keep the surface continuous through a corner. Visual
+  meshes still come from the individual tiles. `buildTrack()` takes a config, so
+  adding a track is one object in `TRACKS`.
 - **Ghost** (`src/game/ghost.js`): records transform keyframes (pos + quaternion)
   at 50 Hz during a run; saved to `localStorage` only when the run is a new PB.
   Playback interpolates (lerp + slerp) against the race clock. Transform
