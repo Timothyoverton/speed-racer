@@ -7,9 +7,14 @@
 
 const ROAD_THICK = 1.6
 const TILE_LEN = 6 // target length of a single straight chord
-const RAMP_TILE_LEN = 2 // elevation changes get much shorter slices, so the
+const RAMP_TILE_LEN = 1.2 // elevation changes get much shorter slices, so the
 // eased profile below reads as a curve rather than a set of steps
 const DEG = Math.PI / 180
+// Corners are built from straight chords, and the barrier is faceted the same
+// way. Capping only the chord LENGTH leaves a tight corner turning ~19deg per
+// chord, and each straight barrier segment then cuts well inside the arc. Cap
+// the angle per chord too, and take whichever rule gives the finer slice.
+const MAX_CHORD_ANGLE = 5 * DEG
 
 function dirOf(heading) {
   // heading 0 => facing +Z
@@ -42,7 +47,12 @@ class Turtle {
     const cy = this.y + rise / 2 - ROAD_THICK / 2 / cosP
     this.tiles.push({
       pos: [cx, cy, cz],
-      rot: [pitch, this.heading, 0],
+      // Pitch has to be applied about the road's OWN lateral axis, so the
+      // rotation is YXZ (yaw first, then pitch) and negated: in three's XYZ
+      // default the pitch is applied last, about the world X axis, which tilts
+      // the road by -cos(yaw)*sin(pitch) — inverted, and scaled by heading.
+      rot: [-pitch, this.heading, 0],
+      pitch,
       // `len` is the horizontal run; the box has to be the longer SLOPE length
       // or consecutive pitched slices fall short of each other and leave a gap
       size: [this.w, ROAD_THICK, len / cosP],
@@ -88,7 +98,7 @@ class Turtle {
     const total = Math.abs(angleDeg) * DEG
     const sign = Math.sign(angleDeg)
     const arcLen = total * radius
-    const steps = Math.max(3, Math.ceil(arcLen / TILE_LEN))
+    const steps = Math.max(3, Math.ceil(Math.max(arcLen / TILE_LEN, total / MAX_CHORD_ANGLE)))
     const dAngle = (total / steps) * sign
     const chord = arcLen / steps
     for (let i = 0; i < steps; i++) {
@@ -150,7 +160,7 @@ function mergeTiles(tiles) {
   const slabs = []
   let run = null
   const sameOrient = (a, b) =>
-    Math.abs(a.rot[0] - b.rot[0]) < 1e-6 && Math.abs(a.rot[1] - b.rot[1]) < 1e-6
+    Math.abs(a.pitch - b.pitch) < 1e-6 && Math.abs(a.rot[1] - b.rot[1]) < 1e-6
 
   for (const tile of tiles) {
     if (run && sameOrient(run.tiles[0], tile)) {
@@ -164,7 +174,8 @@ function mergeTiles(tiles) {
   return slabs.map((s) => {
     const first = s.tiles[0]
     const last = s.tiles[s.tiles.length - 1]
-    const [pitch, yaw] = first.rot
+    const pitch = first.pitch
+    const yaw = first.rot[1]
     // unit vector along the run (accounting for the ramp pitch)
     const horiz = Math.cos(pitch)
     const dir = [Math.sin(yaw) * horiz, Math.sin(pitch), Math.cos(yaw) * horiz]
@@ -244,9 +255,9 @@ const STADIUM_SPRINT = buildTrack({
     ['straight', 20],
     ['turn', -70, 26],
     ['straight', 16],
-    ['ramp', 15, 2.2],
+    ['ramp', 22, 1.5],
     ['straight', 10],
-    ['ramp', 12, -2.2],
+    ['ramp', 20, -1.5],
     ['straight', 10],
     ['checkpoint'],
     ['straight', 20],
@@ -261,10 +272,70 @@ const STADIUM_SPRINT = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, STADIUM_SPRINT]
+// --- Track 2: Nations Sprint -------------------------------------------------
+// A homage to the classic Nations stadium sprint, not a copy of it: fast
+// opening straight, a crest to get light over, a quick chicane, a long
+// sweeper, and a run to the line. Point-to-point, like the originals.
+const NATIONS_SPRINT = buildTrack({
+  id: 'nations-sprint-2',
+  name: 'Nations Sprint',
+  roadWidth: 16,
+  // estimates from the layout, not driven times — retune once there are laps
+  medals: { author: 34000, gold: 39000, silver: 46000, bronze: 56000 },
+  course: [
+    ['start'],
+    ['straight', 60], // launch straight, hard on the throttle
+    ['turn', -55, 34], // fast right, taken flat
+    ['straight', 24],
+    ['checkpoint'],
+    ['ramp', 18, 3.2], // up over the crest
+    ['straight', 12],
+    ['ramp', 16, -3.2], // and back down
+    ['straight', 20],
+    ['turn', 80, 22], // into the chicane
+    ['straight', 18],
+    ['turn', -95, 18], // and out of it
+    ['checkpoint'],
+    ['straight', 34],
+    ['turn', -120, 26], // long right-hand sweeper
+    ['straight', 40],
+    ['turn', 90, 20], // tight left
+    ['straight', 26],
+    ['checkpoint'],
+    ['turn', -70, 30],
+    ['straight', 70], // run to the line
+    ['finish'],
+  ],
+})
 
-// Active track. Swap to STADIUM_SPRINT (or TRACKS[1]) once the dynamics feel good.
-export const TRACK = TEST_PAD
+export const TRACKS = [TEST_PAD, STADIUM_SPRINT, NATIONS_SPRINT]
 
-if (import.meta.env.DEV && typeof window !== 'undefined') window.__track = TRACK
+const TRACK_KEY = 'speed-racer:track'
+
+function pickTrack() {
+  try {
+    return TRACKS.find((t) => t.id === localStorage.getItem(TRACK_KEY)) || TRACKS[0]
+  } catch {
+    return TRACKS[0]
+  }
+}
+
+// The active track, chosen once at load.
+export const TRACK = pickTrack()
+
+// Switching reloads the page. Everything downstream — collider slabs, the
+// instanced track meshes, the texture repeats, the shadow camera bounds — is
+// derived from TRACK once at module load, and picking a different track is a
+// rare, deliberate act in a time-attack game. Not worth making all of that
+// rebuild live for something you do between grinding sessions.
+export function selectTrack(id) {
+  try {
+    localStorage.setItem(TRACK_KEY, id)
+  } catch {
+    /* private mode — the choice just won't stick */
+  }
+  window.location.reload()
+}
+
+if (import.meta.env?.DEV && typeof window !== 'undefined') window.__track = TRACK
 export const CHECKPOINT_COUNT = TRACK.checkpoints.length

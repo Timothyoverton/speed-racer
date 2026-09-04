@@ -10,7 +10,7 @@ function useInstanceMatrices(ref, items) {
     for (let i = 0; i < items.length; i++) {
       const it = items[i]
       o.position.set(it.p[0], it.p[1], it.p[2])
-      o.rotation.set(it.r[0], it.r[1], it.r[2])
+      o.rotation.set(it.r[0], it.r[1], it.r[2], 'YXZ')
       o.scale.set(it.s[0], it.s[1], it.s[2])
       o.updateMatrix()
       mesh.setMatrixAt(i, o.matrix)

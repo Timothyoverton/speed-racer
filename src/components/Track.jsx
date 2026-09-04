@@ -40,7 +40,7 @@ export default function Track({ onFinish }) {
           const pad = slab.pad
           const rw = TRACK.roadWidth
           return (
-            <group key={i} position={slab.pos} rotation={slab.rot}>
+            <group key={i} position={slab.pos} rotation={[slab.rot[0], slab.rot[1], slab.rot[2], 'YXZ']}>
               <CuboidCollider args={[w / 2 + pad, h / 2, l / 2 + pad]} friction={0} restitution={0} />
               <CuboidCollider
                 args={[0.3, RAIL_H, l / 2 + RAIL_OVERLAP]}

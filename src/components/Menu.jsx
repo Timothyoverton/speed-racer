@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TRACK } from '../game/track.js'
+import { TRACK, TRACKS, selectTrack } from '../game/track.js'
 import { startCountdown } from '../game/store.js'
 import { bestTime, topTimes, getName, setName, medalFor } from '../game/leaderboard.js'
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
@@ -24,6 +24,18 @@ export default function Menu() {
       <div className="panel">
         <div className="title">SPEED RACER</div>
         <div className="subtitle">{TRACK.name} — chase the track record</div>
+
+        <div className="tracks">
+          {TRACKS.map((t) => (
+            <button
+              key={t.id}
+              className={'track' + (t.id === TRACK.id ? ' active' : '')}
+              onClick={() => t.id !== TRACK.id && selectTrack(t.id)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
 
         <div style={{ marginTop: 18 }}>
           <div className="row">

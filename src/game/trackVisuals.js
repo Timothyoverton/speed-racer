@@ -14,7 +14,7 @@ const dummy = new THREE.Object3D()
 
 function tileSpace(tile) {
   dummy.position.set(tile.pos[0], tile.pos[1], tile.pos[2])
-  dummy.rotation.set(tile.rot[0], tile.rot[1], tile.rot[2])
+  dummy.rotation.set(tile.rot[0], tile.rot[1], tile.rot[2], 'YXZ')
   dummy.updateMatrixWorld()
   return dummy.matrixWorld
 }
