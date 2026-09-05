@@ -58,6 +58,19 @@ const PRESETS = {
     shimmer: 0.22,
     gain: 0.08,
   },
+  'freefall-3': {
+    // the darkest and slowest of the four — long falling breaths, a tritone
+    // grinding against the fifth, and the widest filter swell so the pad
+    // blooms open every time the road drops away
+    root: -26,
+    chords: [[0, 7, 12], [0, 6, 13], [-5, 2, 10], [0, 7, 15], [-2, 5, 12]],
+    wave: 'sawtooth',
+    cutoff: 260,
+    sweep: 640,
+    pulseSec: 4.2,
+    shimmer: 0.34,
+    gain: 0.085,
+  },
   'qiddiya-rush-2': {
     root: -19, // brighter, a touch more tension
     chords: [[0, 7, 12], [1, 8, 13], [0, 7, 12], [-3, 4, 11]],
@@ -94,6 +107,11 @@ export function startMusic(trackId) {
   if (current === trackId && voices) return
   stopMusic()
 
+  // A new track with no preset falls back rather than going silent, but say so
+  // — Freefall shipped on Test Pad's bed for a while because this was quiet.
+  if (import.meta.env.DEV && !PRESETS[trackId]) {
+    console.warn(`music: no preset for track "${trackId}", using test-pad-0`)
+  }
   const p = PRESETS[trackId] || PRESETS['test-pad-0']
   current = trackId
 
