@@ -58,9 +58,11 @@ function onOrientation(e) {
   const off = raw - tilt.zero
   const sign = tilt.invert ? -1 : 1
   const mag = Math.max(Math.abs(off) - DEAD_DEG, 0) / (RANGE_DEG - DEAD_DEG)
-  // negative because tilting left should steer left, and +1 is left in the
-  // car's convention (toward +X / screen-left with the chase camera)
-  tilt.steer = Math.max(-1, Math.min(1, mag)) * -Math.sign(off) * sign
+  // +1 is left in the car's convention (toward +X / screen-left with the chase
+  // camera). Confirmed against a real phone in landscape: tilting left has to
+  // come out positive. The earlier sign was only ever checked against the
+  // portrait/gamma path, which isn't the branch a landscape phone uses.
+  tilt.steer = Math.max(-1, Math.min(1, mag)) * Math.sign(off) * sign
   input.axis = tilt.steer
 }
 
