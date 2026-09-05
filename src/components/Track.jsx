@@ -110,9 +110,11 @@ export default function Track({ onFinish }) {
           />
           <CuboidCollider
             sensor
-            position={[cp.pos[0], cp.pos[1] + 2.5, cp.pos[2]]}
+            position={[cp.pos[0], cp.pos[1] + 7, cp.pos[2]]}
             rotation={[0, cp.yaw, 0]}
-            args={[cp.width / 2, 3, 0.6]}
+            // tall enough that a car flying off a kicker still trips it —
+            // spans roughly -2m to +16m above the road
+            args={[cp.width / 2, 9, 0.6]}
             onIntersectionEnter={() => {
               if (getState().phase !== 'racing') return
               clearCheckpoint(i)
@@ -133,9 +135,9 @@ export default function Track({ onFinish }) {
       />
       <CuboidCollider
         sensor
-        position={[TRACK.finish.pos[0], TRACK.finish.pos[1] + 2.5, TRACK.finish.pos[2]]}
+        position={[TRACK.finish.pos[0], TRACK.finish.pos[1] + 7, TRACK.finish.pos[2]]}
         rotation={[0, TRACK.finish.yaw, 0]}
-        args={[TRACK.roadWidth / 2, 3, 0.7]}
+        args={[TRACK.roadWidth / 2, 9, 0.7]}
         onIntersectionEnter={() => {
           if (getState().phase !== 'racing') return
           if (finished.current) return

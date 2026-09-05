@@ -51,7 +51,11 @@ const MAX_SLIP = 0.42 // rad — steering slip angle at full lock, low speed
 const MAX_SLIP_HANDBRAKE = 0.72 // bigger slip while drifting
 const STEER_SNAP = 6 // heading-error -> yaw-rate gain
 const TURN_MIN_SPEED = 1.5 // below this you can't really steer
-const MAX_AIR_TIME = 1.8 // airborne longer than this = fell off, respawn
+// Airborne longer than this = you've left the world, respawn. Freefall's
+// kickers launch onto a road that drops away, so genuine flights run well past
+// the old 1.8s — falling off the map is caught by RESPAWN_Y anyway, which is
+// the case this was really guarding.
+const MAX_AIR_TIME = 5.0
 const STEER_RATE = 5.5 // how fast the steering input itself moves, 1/s
 const WHEEL_R = 0.42
 
@@ -390,6 +394,7 @@ export default function Car({ recorder }) {
     hud.rpm01 = carState.rpm01
     hud.drift = carState.slip
     hud.handbrake = carState.handbrake
+    hud.airTime = carState.airTime
 
     ghostThrottle.current += dt
     if (activeGhost.frames && ghostThrottle.current > 0.15) {

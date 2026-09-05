@@ -15,6 +15,7 @@ export default function Hud() {
   const rushRef = useRef(null)
   const hbRef = useRef(null)
   const topRef = useRef(null)
+  const airRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -38,6 +39,13 @@ export default function Hud() {
       }
       if (hbRef.current) hbRef.current.classList.toggle('on', hud.handbrake)
       if (topRef.current) topRef.current.textContent = String(Math.round(hud.topSpeedKmh))
+      if (airRef.current) {
+        // only worth showing once it's a real flight, not a bump
+        const flying = hud.airTime > 0.35
+        airRef.current.style.opacity = flying ? '1' : '0'
+        airRef.current.parentNode.style.opacity = flying ? '1' : '0'
+        if (flying) airRef.current.textContent = hud.airTime.toFixed(1) + 's'
+      }
       const d = deltaRef.current
       if (d) {
         if (hud.ghostDeltaMs == null) {
@@ -57,6 +65,7 @@ export default function Hud() {
   return (
     <div className="hud">
       <div className="rush" ref={rushRef} />
+      <div className="airtime"><span>AIRBORNE</span><b ref={airRef}>0.0s</b></div>
 
       <div className="timer">
         <span ref={timeRef}>0:00.000</span>

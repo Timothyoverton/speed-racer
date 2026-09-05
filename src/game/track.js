@@ -342,7 +342,59 @@ const QIDDIYA_RUSH = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH]
+// --- Track 3: Freefall ------------------------------------------------------
+// Slipstream taken to the extreme: twice the length, and built around four
+// kickers that each launch straight onto a road falling away underneath you.
+// Hold the middle and you spend a huge fraction of the lap in the air.
+//
+// The pattern each time is climb -> kicker -> long steep drop. The kicker sets
+// the launch angle, then the road descends faster than the car does, so the
+// flight keeps extending instead of ending at the same height it started.
+// Net elevation is -18m over the lap, all of it downhill drama.
+const FREEFALL = buildTrack({
+  id: 'freefall-3',
+  name: 'Freefall',
+  roadWidth: 22, // wide — you land where you land
+  // estimates from the layout, not driven times — retune once there are laps
+  medals: { author: 62000, gold: 70000, silver: 82000, bronze: 100000 },
+  course: [
+    ['start'],
+    ['straight', 130], // get everything you can before the first launch
+    ['turn', -30, 130],
+    ['straight', 60],
+    ['checkpoint'],
+    ['jump', 30, 4.0], // kicker 1 — ~15deg off the lip
+    ['ramp', 78, -15], // and the floor falls out
+    ['straight', 95], // long run-out: the flight is ~100m
+    ['turn', 45, 110],
+    ['straight', 70],
+    ['ramp', 50, 6], // climb to the big one
+    ['jump', 28, 3.75], // kicker 2 — ~15deg
+    ['ramp', 92, -21], // the long one
+    ['checkpoint'],
+    ['straight', 100],
+    ['turn', -60, 95],
+    ['straight', 80],
+    ['ramp', 45, 5],
+    ['jump', 26, 3.5], // kicker 3 — ~15deg
+    ['ramp', 74, -14],
+    ['straight', 70],
+    ['turn', 50, 100],
+    ['straight', 95],
+    ['checkpoint'],
+    ['turn', -55, 105],
+    ['straight', 65],
+    ['ramp', 40, 4.5], // up to the biggest
+    ['jump', 32, 4.5], // kicker 4 — the big one, ~15.7deg
+    ['ramp', 104, -24], // the drop of the lap
+    ['straight', 105],
+    ['turn', 40, 120],
+    ['straight', 150], // long run to the line
+    ['finish'],
+  ],
+})
+
+export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL]
 
 const TRACK_KEY = 'speed-racer:track'
 

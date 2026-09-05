@@ -43,6 +43,7 @@ export default function Effects() {
   const cursor = useRef(0)
   const markCursor = useRef(0)
   const emitAcc = useRef(0)
+  const wasAir = useRef(false)
 
   const smoke = useMemo(() => {
     const pos = new Float32Array(SMOKE * 3)
@@ -122,6 +123,29 @@ export default function Effects() {
         pos[i3 + 1] = -1000
       }
     }
+
+    // --- landing burst ------------------------------------------------------
+    // Freefall's kickers put the car down hard; a puff out of both contact
+    // patches sells the impact far better than the camera dip alone.
+    if (racing && s.grounded && wasAir.current && s.landing > 0.25) {
+      const n = Math.min(Math.round(s.landing * 26), 30)
+      for (let k = 0; k < n; k++) {
+        const i = cursor.current
+        cursor.current = (cursor.current + 1) % SMOKE
+        const side = k % 2 === 0 ? 1 : -1
+        const i3 = i * 3
+        pos[i3] = s.pos[0] + s.right[0] * side * WHEEL_X + (Math.random() - 0.5) * 1.2
+        pos[i3 + 1] = s.pos[1] + CONTACT_Y + 0.2 + Math.random() * 0.3
+        pos[i3 + 2] = s.pos[2] + s.right[2] * side * WHEEL_X + (Math.random() - 0.5) * 1.2
+        vel[i3] = s.right[0] * side * (1.6 + Math.random() * 2.4) - s.fwd[0] * 2
+        vel[i3 + 1] = 1.6 + Math.random() * 2.2
+        vel[i3 + 2] = s.right[2] * side * (1.6 + Math.random() * 2.4) - s.fwd[2] * 2
+        size[i] = 1.1 + Math.random() * 0.9
+        life[i] = 1.0 + Math.random() * 0.8
+        alpha[i] = 0.34
+      }
+    }
+    wasAir.current = !s.grounded
 
     // --- emit ---------------------------------------------------------------
     const slipping = racing && s.grounded && s.slip > SLIP_ON

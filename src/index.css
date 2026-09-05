@@ -348,6 +348,35 @@ button.swatch.active {
   font-weight: 700;
 }
 
+.hud .airtime {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+}
+
+.hud .airtime span {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent-2);
+}
+
+.hud .airtime b {
+  display: block;
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--text);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  transition: opacity 0.12s linear;
+}
+
+body.touch-mode .hud .airtime { top: 62px; }
+body.touch-mode .hud .airtime b { font-size: 24px; }
+
 /* speed rush: vignette that closes in with velocity */
 .hud .rush {
   position: absolute;

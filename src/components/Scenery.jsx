@@ -35,6 +35,7 @@ export default function Scenery() {
     const masts = []
     const heads = []
     const hills = []
+    const clouds = []
 
     // treeline — a broken ring well outside the barriers
     for (let i = 0; i < 260; i++) {
@@ -103,7 +104,19 @@ export default function Scenery() {
       })
     }
 
-    return { trunks, canopies, stands, crowd, masts, heads, hills }
+    // a thin cloud deck, well above even Freefall's biggest launch
+    for (let i = 0; i < 34; i++) {
+      const a = r() * Math.PI * 2
+      const rad = r() * 900
+      const w = 90 + r() * 200
+      clouds.push({
+        p: [cx + Math.cos(a) * rad, gy + 150 + r() * 90, cz + Math.sin(a) * rad],
+        r: [0, r() * 3, 0],
+        s: [w, 6 + r() * 10, w * (0.4 + r() * 0.5)],
+      })
+    }
+
+    return { trunks, canopies, stands, crowd, masts, heads, hills, clouds }
   }, [cx, cz, R, gy])
 
   const geos = useMemo(
@@ -120,6 +133,15 @@ export default function Scenery() {
       canopy: new THREE.MeshStandardMaterial({ color: '#2c5a33', roughness: 1 }),
       crowd: new THREE.MeshStandardMaterial({ color: '#8892a6', roughness: 0.9 }),
       hill: new THREE.MeshStandardMaterial({ color: '#3f5a55', roughness: 1 }),
+      cloud: new THREE.MeshStandardMaterial({
+        color: '#ffffff',
+        transparent: true,
+        opacity: 0.32,
+        depthWrite: false,
+        roughness: 1,
+        emissive: '#c9dcf2',
+        emissiveIntensity: 0.25,
+      }),
       lamp: new THREE.MeshStandardMaterial({
         color: '#fffbe8',
         emissive: '#fff3c4',
@@ -146,6 +168,7 @@ export default function Scenery() {
       <Boxes items={extra.crowd} material={extraMats.crowd} />
       <Boxes items={extra.masts} material={mats.metal} castShadow />
       <Boxes items={extra.heads} material={extraMats.lamp} />
+      <Boxes items={extra.clouds} material={extraMats.cloud} />
     </group>
   )
 }
