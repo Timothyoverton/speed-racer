@@ -363,20 +363,20 @@ const FREEFALL = buildTrack({
     ['turn', -30, 130],
     ['straight', 60],
     ['checkpoint'],
-    ['jump', 30, 4.0], // kicker 1 — ~15deg off the lip
+    ['jump', 30, 6.0], // kicker 1 — ~21deg off the lip
     ['ramp', 78, -15], // and the floor falls out
     ['straight', 95], // long run-out: the flight is ~100m
     ['turn', 45, 110],
     ['straight', 70],
     ['ramp', 50, 6], // climb to the big one
-    ['jump', 28, 3.75], // kicker 2 — ~15deg
+    ['jump', 28, 5.65], // kicker 2 — ~22deg
     ['ramp', 92, -21], // the long one
     ['checkpoint'],
     ['straight', 100],
     ['turn', -60, 95],
     ['straight', 80],
     ['ramp', 45, 5],
-    ['jump', 26, 3.5], // kicker 3 — ~15deg
+    ['jump', 26, 5.25], // kicker 3 — ~22deg
     ['ramp', 74, -14],
     ['straight', 70],
     ['turn', 50, 100],
@@ -385,7 +385,7 @@ const FREEFALL = buildTrack({
     ['turn', -55, 105],
     ['straight', 65],
     ['ramp', 40, 4.5], // up to the biggest
-    ['jump', 32, 4.5], // kicker 4 — the big one, ~15.7deg
+    ['jump', 32, 6.9], // kicker 4 — the big one, ~23deg
     ['ramp', 104, -24], // the drop of the lap
     ['straight', 105],
     // THE EDGE. A jump with a negative rise: the road stays flat, then pitches

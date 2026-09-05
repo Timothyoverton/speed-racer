@@ -4,7 +4,7 @@ A Trackmania-style time-attack racer for the browser. Grind a track until you
 own the record. 3D, behind-the-car camera, instant restart, your ghost racing
 alongside you.
 
-Three tracks, picked on the menu:
+Four tracks, picked on the menu:
 
 - **Test Pad** — wide and forgiving, for dialling in the car.
 - **Slipstream** — 993 m point-to-point, corners 60–110 m radius so it can be
@@ -12,6 +12,11 @@ Three tracks, picked on the menu:
 - **Qiddiya Rush** — 893 m, a homage to the Trackmania map of that name (its
   character, not its layout — and without the banked wall, which the track DSL
   can't express yet).
+- **Freefall** — 2390 m with 80 m of vertical. Four ~22° kickers, each launching
+  onto a road that falls away faster than the car does (2.0–2.6 s airborne), and
+  a final **edge**: a jump with a *negative* rise, so the road stays flat then
+  pitches down to ~42° and drops out from under you — 1.45 s of air, 72 m, a 25 m
+  fall, without losing speed.
 
 **Corner radius is the design constraint.** The car's turn rate is capped at
 `BASE_YAW * YAW_REF_SPEED / speed`, so the tightest radius holdable at speed `v`
@@ -30,6 +35,11 @@ _(after the repo + GitHub Pages are set up — see Deploy)_
    `Space` handbrake (for drifting corners) · `Del`/`Backspace` drops you back
    at the last checkpoint · `C` cycles chase / close / wide / bumper cameras ·
    `Q` quits to the menu · `M` mutes.
+   On a phone it switches to touch automatically: **GO** and **BRAKE** thumb pads
+   with **DRIFT** beside the brake, and steering by tilting the handset (tap once
+   to grant motion access — iOS only allows it from a gesture). **Centre**
+   re-zeros straight-ahead to however you're holding it; **Invert** flips the
+   direction. Menu has Auto / Touch / Keys if the detection guesses wrong.
 3. Clear all the **checkpoints** in order, then cross the finish line.
 4. `R` restarts instantly, from anywhere, any time — no menus. This is the
    whole game: fail fast, go again.
@@ -148,6 +158,11 @@ download, so the whole game is JS.
   probe resolves the surface normal into pitch and roll in the car's own axes
   and the *model* is laid along it — otherwise the car stays dead level going
   over a crest. Purely visual; the physics body is untouched.
+- **The car's collider is a ROUNDED box, and that matters.** The body is locked
+  to yaw so it cannot tilt onto a slope — it climbs bodily. With a sharp-edged
+  box the front bottom edge stubs into a ramp face and the car stops dead
+  (measured: 187 km/h → 0 on a 22° kicker). A border radius of 0.25 m lets it
+  roll on instead. Don't "simplify" this back to a plain cuboid.
 - **`ramp` vs `jump`**: a ramp eases at both ends (a hill — smooth on, smooth
   off), a jump eases on at the bottom and leaves at full slope so it launches
   you. Easing both ends is exactly what stops a ramp launching you, which is
