@@ -7,6 +7,7 @@ import { initAudio } from '../game/audio.js'
 import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.js'
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
+import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
@@ -14,6 +15,7 @@ export default function Menu() {
   const [name, setNameState] = useState(getName())
   const [colour, setColour] = useState(getCarColourId)
   const [ctrl, setCtrl] = useState(touchModeSetting)
+  const [music, setMusic] = useState(isMusicEnabled)
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
   const fastest = bestTopSpeed(TRACK.id)
@@ -102,6 +104,16 @@ export default function Menu() {
               {lbl}
             </button>
           ))}
+        </div>
+
+        <div className="colours">
+          <span className="label">Music</span>
+          <button
+            className={'ctrlmode' + (music ? ' active' : '')}
+            onClick={() => setMusic(setMusicEnabled(!music))}
+          >
+            {music ? 'On' : 'Off'}
+          </button>
         </div>
 
         <div className="colours">

@@ -137,8 +137,23 @@ export function initAudio() {
   roadGain.connect(master)
   road.start()
 
-  nodes = { oscs, engineGain, engineFilter, windFilter, windGain, skidFilter, skidGain, roadGain, roadFilter }
+  // a bus of its own for music, so it can be balanced (and muted) separately
+  const musicBus = ctx.createGain()
+  musicBus.gain.value = 1
+  musicBus.connect(master)
+
+  nodes = { oscs, engineGain, engineFilter, windFilter, windGain, skidFilter, skidGain, roadGain, roadFilter, musicBus }
   running = true
+}
+
+// For music.js — it shares this context and hangs off the music bus, so the
+// mute toggle and the master fade cover it without extra plumbing.
+export function audioCtx() {
+  return ctx
+}
+
+export function musicBus() {
+  return nodes && nodes.musicBus
 }
 
 // Called every frame from the physics loop.
@@ -186,6 +201,36 @@ export function idleAudio() {
   nodes.windGain.gain.setTargetAtTime(0, t, 0.1)
   nodes.roadGain.gain.setTargetAtTime(0, t, 0.1)
   nodes.skidGain.gain.setTargetAtTime(0, t, 0.1)
+}
+
+// The start sequence: three short tones then a longer, higher one on GO — the
+// pattern a real grid start uses. Two oscillators an octave apart with a snappy
+// envelope, so it cuts through the engine.
+export function countdownBeep(final = false) {
+  if (!running || !ctx || muted) return
+  const t = ctx.currentTime
+  const dur = final ? 0.75 : 0.16
+  const base = final ? 1244.5 : 830.6 // D#6 / G#5
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(final ? 0.26 : 0.19, t + 0.012)
+  g.gain.setTargetAtTime(0.0001, t + (final ? 0.25 : 0.05), final ? 0.16 : 0.04)
+  g.connect(master)
+  for (const [type, mult, level] of [
+    ['square', 1, 0.5],
+    ['sine', 2, 0.32],
+    ['sine', 0.5, 0.22],
+  ]) {
+    const osc = ctx.createOscillator()
+    osc.type = type
+    osc.frequency.value = base * mult
+    const og = ctx.createGain()
+    og.gain.value = level
+    osc.connect(og)
+    og.connect(g)
+    osc.start(t)
+    osc.stop(t + dur + 0.05)
+  }
 }
 
 // One-shots -----------------------------------------------------------------

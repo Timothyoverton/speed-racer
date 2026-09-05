@@ -11,6 +11,7 @@ import { resetHud, hud } from '../game/hud.js'
 import { resetTimer, stopTimer } from '../game/timing.js'
 import { GhostRecorder, activeGhost, loadGhost } from '../game/ghost.js'
 import { submitTime, medalFor, bestTime, getName } from '../game/leaderboard.js'
+import { startMusic, stopMusic } from '../game/music.js'
 
 // Mounted fresh for every run (keyed by runId in the parent). All the reset
 // logic lives in the useMemo so it runs exactly once per run, before first frame.
@@ -20,12 +21,14 @@ export default function Race() {
     resetHud(CHECKPOINT_COUNT)
     resetTimer()
     resetCarState()
+    startMusic(TRACK.id)
     activeGhost.frames = loadGhost(TRACK.id)
     return new GhostRecorder()
   }, [])
 
   function onFinish() {
     const timeMs = stopTimer()
+    stopMusic()
     const name = getName()
     const prevBest = bestTime(TRACK.id)
     const topKmh = Math.round(hud.topSpeedKmh)

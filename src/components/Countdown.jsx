@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { beginRacing } from '../game/store.js'
-import { blip } from '../game/audio.js'
+import { countdownBeep } from '../game/audio.js'
 
 const STEPS = [
   { at: 0, text: '3' },
@@ -16,7 +16,7 @@ export default function Countdown() {
     const timers = STEPS.map((s, i) =>
       setTimeout(() => {
         setStep(i)
-        blip(s.go ? 1180 : 620, s.go ? 0.35 : 0.14, s.go ? 0.2 : 0.13)
+        countdownBeep(!!s.go)
         if (s.go) beginRacing()
       }, s.at),
     )

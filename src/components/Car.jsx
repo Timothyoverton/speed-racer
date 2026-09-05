@@ -14,6 +14,7 @@ import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
 import { updateAudio, idleAudio, thud, initAudio } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
+import { stopMusic } from '../game/music.js'
 import { sampleTrack } from '../game/trackQuery.js'
 
 // --- tuning (all in m, s) ---------------------------------------------------
@@ -132,6 +133,7 @@ export default function Car({ recorder }) {
     }
     if (input.quit) {
       input.quit = false
+      stopMusic() // Race stays mounted in the menu, so it won't stop itself
       toMenu()
       return
     }
