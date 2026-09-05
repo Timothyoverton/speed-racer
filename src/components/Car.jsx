@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RigidBody, CuboidCollider, useRapier } from '@react-three/rapier'
+import { RigidBody, RoundCuboidCollider, useRapier } from '@react-three/rapier'
 import * as THREE from 'three'
 import CarModel from './CarModel.jsx'
 import { TRACK } from '../game/track.js'
@@ -474,8 +474,12 @@ export default function Car({ recorder }) {
       canSleep={false}
       ccd
     >
-      {/* frictionless box — all longitudinal / lateral behaviour is done in code */}
-      <CuboidCollider args={[0.85, 0.42, 1.85]} friction={0} restitution={0.2} />
+      {/* Frictionless box — all longitudinal / lateral behaviour is done in code.
+          ROUNDED edges matter: the body is locked to yaw, so it can't tilt onto
+          a ramp. A sharp-edged box stubs its front edge into the slope and
+          stops dead; a rounded one rolls onto it. Same overall size — the
+          border radius is subtracted from the half-extents. */}
+      <RoundCuboidCollider args={[0.6, 0.17, 1.6, 0.25]} friction={0} restitution={0.2} />
       <CarModel live color={getCarColour()} />
     </RigidBody>
   )

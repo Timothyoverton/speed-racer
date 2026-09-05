@@ -356,7 +356,7 @@ const FREEFALL = buildTrack({
   name: 'Freefall',
   roadWidth: 22, // wide — you land where you land
   // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 62000, gold: 70000, silver: 82000, bronze: 100000 },
+  medals: { author: 70000, gold: 80000, silver: 94000, bronze: 115000 },
   course: [
     ['start'],
     ['straight', 130], // get everything you can before the first launch
@@ -388,6 +388,12 @@ const FREEFALL = buildTrack({
     ['jump', 32, 4.5], // kicker 4 — the big one, ~15.7deg
     ['ramp', 104, -24], // the drop of the lap
     ['straight', 105],
+    // THE EDGE. A jump with a negative rise: the road stays flat, then pitches
+    // down harder and harder, so it simply falls away under you at ~42deg. You
+    // don't launch off it — you drive off it, which is the point.
+    ['jump', 45, -20],
+    ['ramp', 70, -13], // still falling
+    ['straight', 130], // somewhere to land
     ['turn', 40, 120],
     ['straight', 150], // long run to the line
     ['finish'],
