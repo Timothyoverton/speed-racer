@@ -193,7 +193,9 @@ export default function Car({ recorder }) {
 
     // --- smoothed driver input ---------------------------------------------
     // +1 = steering left (toward +X / screen-left with the chase camera)
-    const steerTarget = racing ? (input.left ? 1 : 0) - (input.right ? 1 : 0) : 0
+    const keySteer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
+    // tilt (analog) wins when the phone is providing it, keys otherwise
+    const steerTarget = racing ? (input.axis != null ? input.axis : keySteer) : 0
     const sk = 1 - Math.exp(-STEER_RATE * dt)
     carState.steer = THREE.MathUtils.lerp(carState.steer, steerTarget, sk)
     const steer = carState.steer

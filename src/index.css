@@ -459,33 +459,249 @@ button.swatch.active {
   font-weight: 700;
 }
 
+/* HUD gets out of the way of the thumb pads when touch controls are up */
+body.touch-mode .hud .restart-hint {
+  display: none;
+}
+
+/* landscape is short, so the readout goes top-right under the minor buttons
+   rather than fighting the thumb pads for the bottom corners */
+body.touch-mode .hud .speed {
+  right: 16px;
+  bottom: auto;
+  top: 54px;
+  text-align: right;
+}
+
+body.touch-mode .hud .speed b {
+  font-size: 30px;
+}
+
+body.touch-mode .hud .revbar {
+  width: 116px;
+  margin-bottom: 5px;
+}
+
+body.touch-mode .hud .speed .gear {
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+}
+
+body.touch-mode .hud .topspeed {
+  display: none;
+}
+
+body.touch-mode .hud .mute {
+  top: 12px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+}
+
+body.touch-mode .hud .progress {
+  top: 12px;
+  left: 14px;
+  font-size: 11px;
+}
+
+body.touch-mode .hud .timer {
+  top: 6px;
+  font-size: 30px;
+}
+
 /* ---- touch controls ---- */
+/* Shown by App when touch mode is on, not by a media query, so it can be
+   forced from the menu for testing on a desktop. */
 .touch {
   position: absolute;
   inset: 0;
   z-index: 6;
   pointer-events: none;
-  display: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.touch button {
+.touch .pad {
   position: absolute;
   pointer-events: auto;
-  width: 84px;
-  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  border: 1px solid var(--stroke);
-  background: rgba(10, 15, 33, 0.55);
+  border: 2px solid var(--stroke);
+  background: rgba(10, 15, 33, 0.45);
+  backdrop-filter: blur(4px);
   color: var(--text);
-  font-size: 26px;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: 1px;
+  touch-action: none;
 }
 
-.touch .left { left: 24px; bottom: 40px; }
-.touch .right { left: 128px; bottom: 40px; }
-.touch .gas { right: 24px; bottom: 40px; }
-.touch .brake { right: 128px; bottom: 40px; }
+.touch .pad:active {
+  background: rgba(60, 170, 255, 0.35);
+  border-color: var(--accent-2);
+}
 
-@media (hover: none) and (pointer: coarse) {
-  .touch { display: block; }
+/* thumbs sit at the bottom corners in landscape */
+.touch .gas {
+  right: 24px;
+  bottom: 24px;
+  width: 132px;
+  height: 132px;
+  font-size: 20px;
+  border-color: rgba(124, 243, 193, 0.5);
+}
+
+.touch .brake {
+  left: 24px;
+  bottom: 24px;
+  width: 116px;
+  height: 116px;
+  border-color: rgba(255, 77, 90, 0.5);
+}
+
+.touch .hand {
+  right: 168px;
+  bottom: 34px;
+  width: 86px;
+  height: 86px;
+  font-size: 12px;
+}
+
+.touch .pad.small {
+  width: 78px;
+  height: 78px;
+  font-size: 22px;
+  position: relative;
+  left: auto;
+  bottom: auto;
+}
+
+/* fallback arrows, only when tilt isn't available */
+.touch .tsteer {
+  position: absolute;
+  left: 156px;
+  bottom: 30px;
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.touch .tminor {
+  position: absolute;
+  top: 14px;
+  right: 70px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.touch .tminor button {
+  width: 46px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--stroke);
+  background: rgba(8, 12, 26, 0.55);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* steering readout: shows the tilt actually reaching the car */
+.touch .steerbar {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.touch .steerbar .track {
+  position: relative;
+  width: 190px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(8, 12, 26, 0.66);
+  border: 1px solid var(--stroke);
+}
+
+/* centre tick — tells you where straight actually is */
+.touch .steerbar .track::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.touch .steerbar .track i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 20px;
+  margin: -10px 0 0 -13px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.touch .tiltrow {
+  display: flex;
+  gap: 8px;
+}
+
+.touch .tiltrow button,
+.touch .tiltEnable {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(8, 12, 26, 0.62);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.touch .tiltEnable {
+  padding: 11px 18px;
+  font-size: 13px;
+  border-color: var(--accent-2);
+}
+
+button.ctrlmode {
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--stroke);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+button.ctrlmode.active {
+  color: #04122a;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+
+/* on a short landscape screen the menu panel must still fit */
+@media (max-height: 520px) {
+  .panel {
+    padding: 14px 18px;
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+  }
+  .title { font-size: 26px; }
+  .hud .timer { font-size: 30px; }
+  .hud .speed b { font-size: 34px; }
 }

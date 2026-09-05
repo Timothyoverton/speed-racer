@@ -60,6 +60,8 @@ export const input = {
   respawn: false,
   quit: false,
   camera: false,
+  // Analog steering, -1..1, from phone tilt. null = use the keys instead.
+  axis: null,
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {

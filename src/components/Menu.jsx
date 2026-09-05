@@ -5,12 +5,15 @@ import { bestTime, bestTopSpeed, topTimes, getName, setName, medalFor } from '..
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import { initAudio } from '../game/audio.js'
 import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.js'
+import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
+import { enableTilt } from '../game/tilt.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
 export default function Menu() {
   const [name, setNameState] = useState(getName())
   const [colour, setColour] = useState(getCarColourId)
+  const [ctrl, setCtrl] = useState(touchModeSetting)
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
   const fastest = bestTopSpeed(TRACK.id)
@@ -19,6 +22,8 @@ export default function Menu() {
   function drive() {
     setName(name.trim())
     initAudio() // browsers only allow audio to start from a gesture
+    // iOS only grants motion access from a gesture too, so ask on the same tap
+    if (touchControlsActive()) enableTilt()
     startCountdown()
   }
 
@@ -82,6 +87,22 @@ export default function Menu() {
             ))}
           </div>
         )}
+
+        <div className="colours">
+          <span className="label">Controls</span>
+          {[['auto', 'Auto'], ['on', 'Touch'], ['off', 'Keys']].map(([v, lbl]) => (
+            <button
+              key={v}
+              className={'ctrlmode' + (v === ctrl ? ' active' : '')}
+              onClick={() => {
+                setTouchMode(v)
+                setCtrl(v)
+              }}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
 
         <div className="colours">
           <span className="label">Car</span>
