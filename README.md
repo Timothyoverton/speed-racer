@@ -4,7 +4,7 @@ A Trackmania-style time-attack racer for the browser. Grind a track until you
 own the record. 3D, behind-the-car camera, instant restart, your ghost racing
 alongside you.
 
-Four tracks, picked on the menu:
+Five tracks, picked on the menu:
 
 - **Test Pad** — wide and forgiving, for dialling in the car.
 - **Slipstream** — 993 m point-to-point, corners 60–110 m radius so it can be
@@ -17,6 +17,12 @@ Four tracks, picked on the menu:
   a final **edge**: a jump with a *negative* rise, so the road stays flat then
   pitches down to ~42° and drops out from under you — 1.45 s of air, 72 m, a 25 m
   fall, without losing speed.
+- **Stunt Park** — 2144 m of set pieces rather than a circuit, built around
+  **gaps**: five real holes where the road stops and there is nothing
+  underneath. A rhythm section of five whoops, a table-top whose roof just ends,
+  three descending stairs, a double, and the **Leap of Faith** — a 40 m void
+  with a 16 m drop. 32% of the lap is spent airborne. Miss one and you fall out
+  of the world.
 
 **Corner radius is the design constraint.** The car's turn rate is capped at
 `BASE_YAW * YAW_REF_SPEED / speed`, so the tightest radius holdable at speed `v`
@@ -128,6 +134,31 @@ download, so the whole game is JS.
   gearbox), filtered noise for wind, road roar and tyre screech, plus countdown
   blips and a landing thud. Starts on the DRIVE click (browsers require a
   gesture); `M` or the HUD button mutes, and the choice is remembered.
+
+### Building a jump you can actually land
+
+Jump geometry is ballistics, not taste, and the numbers are unforgiving. A
+kicker of `jump(dist, rise)` leaves at `atan(2*rise/dist)`; with gravity at 22
+the range onto a landing `drop` metres below the lip is
+
+```
+vx * (vy + sqrt(vy^2 + 2*22*drop)) / 22
+```
+
+Two rules came out of getting this wrong on Stunt Park:
+
+- **A landing shelf has to be LONGER than the flight off the shelf above it.**
+  The stairs first used a 22 m shelf behind a kicker that throws the car 41 m at
+  racing speed, so you landed *on the next kicker* and got fired sideways into
+  the void — at 100 km/h in testing it looked perfect, and it only broke at
+  speed.
+- **Height costs the speed you need to clear the gap.** The Leap of Faith first
+  climbed 15 m into its kicker; the car arrived too slow to climb it at all, let
+  alone jump, and sat at the bottom bouncing. The gap was never the problem — it
+  clears from 100 km/h. The drama should come from the drop, not the climb.
+
+Check a new jump across the whole speed range it'll actually be taken at, not
+just the one you had in mind.
 
 ### Measuring a reference lap
 

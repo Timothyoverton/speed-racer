@@ -110,6 +110,22 @@ class Turtle {
     return this
   }
 
+  // A hole in the road. The turtle walks on and lays NOTHING — no surface, no
+  // barrier, no collider — so this is a real void. Come up short and you fall
+  // out of the world and respawn at the last checkpoint. `drop` lowers the far
+  // side, which is what buys the car time to fall on its way across; a gap
+  // between two equal heights needs a lot more speed than it looks.
+  gap(dist, drop = 0) {
+    // below the merge tolerance a "gap" would just be closed up again
+    if (dist < 5) throw new Error(`gap(${dist}) too small to read as a hole`)
+    const [dx, dz] = dirOf(this.heading)
+    this.x += dx * dist
+    this.z += dz * dist
+    this.y -= drop
+    this.dist += dist
+    return this
+  }
+
   // angle in degrees, +ve turns left, radius in metres
   turn(angleDeg, radius) {
     const total = Math.abs(angleDeg) * DEG
@@ -155,6 +171,7 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     else if (cmd === 'straight') t.straight(a)
     else if (cmd === 'ramp') t.ramp(a, b)
     else if (cmd === 'jump') t.jump(a, b)
+    else if (cmd === 'gap') t.gap(a, b)
     else if (cmd === 'turn') t.turn(a, b)
   }
   return {
@@ -180,14 +197,37 @@ function mergeTiles(tiles) {
   const sameOrient = (a, b) =>
     Math.abs(a.pitch - b.pitch) < 1e-6 && Math.abs(a.rot[1] - b.rot[1]) < 1e-6
 
+  // Matching orientation is NOT enough to merge: two straights either side of a
+  // `gap` are perfectly parallel, and merging them would span the void with one
+  // long collider — an invisible floor across the hole. They have to actually
+  // touch.
+  //
+  // The tolerance is deliberately loose. Consecutive chords around a corner do
+  // NOT meet exactly — they're straight lines across an arc, so their ends
+  // splay by up to ~0.2m at the chord angle used here. Tighten this to a few
+  // centimetres and every corner chord reads as a gap, which strips the
+  // collider overlap that keeps corners seamless. A real gap is >= 10m, so
+  // there's a wide margin to sit in.
+  const JOINED = 1.0
+  const touching = (a, b) => {
+    const horiz = Math.cos(a.pitch)
+    const dir = [Math.sin(a.rot[1]) * horiz, Math.sin(a.pitch), Math.cos(a.rot[1]) * horiz]
+    const end = a.pos.map((c, k) => c + (dir[k] * a.size[2]) / 2)
+    const begin = b.pos.map((c, k) => c - (dir[k] * b.size[2]) / 2)
+    return Math.hypot(end[0] - begin[0], end[1] - begin[1], end[2] - begin[2]) < JOINED
+  }
+
   for (const tile of tiles) {
-    if (run && sameOrient(run.tiles[0], tile)) {
+    const prev = run && run.tiles[run.tiles.length - 1]
+    if (run && sameOrient(run.tiles[0], tile) && touching(prev, tile)) {
       run.tiles.push(tile)
     } else {
-      run = { tiles: [tile] }
+      if (run && prev && !touching(prev, tile)) run.gapAfter = true
+      run = { tiles: [tile], gapBefore: !!(prev && !touching(prev, tile)) }
       slabs.push(run)
     }
   }
+  if (run) run.gapAfter = run.gapAfter || false
 
   return slabs.map((s) => {
     const first = s.tiles[0]
@@ -216,6 +256,7 @@ function mergeTiles(tiles) {
       // needs extra collider overlap to keep the surface seamless
       span: s.tiles.length,
       pitch,
+      atGap: !!(s.gapBefore || s.gapAfter),
     }
   })
 }
@@ -231,7 +272,9 @@ function padSlabs(slabs) {
   const pitched = (s) => s && Math.abs(s.pitch) > 1e-6
   for (let i = 0; i < slabs.length; i++) {
     const s = slabs[i]
-    if (pitched(s) || pitched(slabs[i - 1]) || pitched(slabs[i + 1])) s.pad = 0
+    // padding a slab that ends at a void would hang an invisible ledge out over
+    // the hole — exactly what you'd catch a wheel on taking off
+    if (s.atGap || pitched(s) || pitched(slabs[i - 1]) || pitched(slabs[i + 1])) s.pad = 0
     else s.pad = s.span <= 1 ? 2.2 : 0.8
   }
   return slabs
@@ -252,6 +295,9 @@ function padSlabs(slabs) {
 const AUTHOR_FACTOR = 1.58
 const MEDAL_SPREAD = { author: 1, gold: 1.25, silver: 1.583, bronze: 2.083 }
 
+// Every refLapSec below was measured with tools/autopilot.js at the same
+// revision. They only mean anything RELATIVE to each other, so if you change how
+// the autopilot drives, re-measure all five or the tracks drift apart again.
 function medalsFor(refLapSec) {
   const author = refLapSec * 1000 * AUTHOR_FACTOR
   const out = {}
@@ -266,7 +312,7 @@ const TEST_PAD = buildTrack({
   id: 'test-pad-0',
   name: 'Test Pad',
   roadWidth: 30,
-  medals: medalsFor(15.17), // reference lap, measured
+  medals: medalsFor(15.25),
   course: [
     ['start'],
     ['straight', 100],
@@ -294,7 +340,7 @@ const SLIPSTREAM = buildTrack({
   name: 'Slipstream',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: medalsFor(26.8), // reference lap, measured
+  medals: medalsFor(26.62),
   course: [
     ['start'],
     ['straight', 90], // long launch
@@ -339,7 +385,7 @@ const QIDDIYA_RUSH = buildTrack({
   name: 'Qiddiya Rush',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: medalsFor(24.3), // reference lap, measured
+  medals: medalsFor(23.57),
   course: [
     ['start'],
     ['straight', 80], // long run-up, flat out
@@ -377,7 +423,7 @@ const FREEFALL = buildTrack({
   id: 'freefall-3',
   name: 'Freefall',
   roadWidth: 22, // wide — you land where you land
-  medals: medalsFor(60.28), // reference lap, measured
+  medals: medalsFor(63.87),
   course: [
     ['start'],
     ['straight', 130], // get everything you can before the first launch
@@ -421,7 +467,101 @@ const FREEFALL = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL]
+// --- Track 4: Stunt Park -----------------------------------------------------
+// Not a circuit — a run of set pieces, each one a trick with its own name, laid
+// out so you can read the next one while you're still landing the last.
+//
+// Freefall is about hang time on a road that keeps falling away. This is about
+// GAPS: five of them, real holes with nothing underneath, where the road simply
+// stops. Every one is set up by a kicker and lands on a slope that drops away
+// from the lip, because a gap between two equal heights needs far more speed
+// than it looks — the car has to fall the whole way across.
+//
+// Gap distances here are measured, not guessed: each one is clearable with room
+// to spare at the speed the run-up actually produces, and coming up short drops
+// you out of the world.
+const STUNT_PARK = buildTrack({
+  id: 'stunt-park-4',
+  name: 'Stunt Park',
+  roadWidth: 20,
+  medals: medalsFor(57.4), // 58.17 / 56.58 measured; jumps make it vary
+  course: [
+    ['start'],
+    ['straight', 130],
+    ['jump', 20, 2.2], // THE OPENER — a pop to set the tone, ~12deg
+    ['ramp', 26, -2.2],
+    ['straight', 40],
+    ['checkpoint'],
+
+    // THE RHYTHM — five whoops on the trot. Hold it flat and the car skips
+    // across the tops; lift and you drop into every trough.
+    ['jump', 9, 0.9], ['ramp', 11, -0.9],
+    ['jump', 9, 0.9], ['ramp', 11, -0.9],
+    ['jump', 9, 0.9], ['ramp', 11, -0.9],
+    ['jump', 9, 0.9], ['ramp', 11, -0.9],
+    ['jump', 9, 0.9], ['ramp', 11, -0.9],
+    ['straight', 55],
+    ['turn', 42, 115],
+    ['straight', 65],
+
+    // THE TABLE-TOP — climb it, run the flat roof, then the roof just ends.
+    // The climb is deliberately shallow: every metre climbed is speed gone, and
+    // speed is what gets you across. 30m with an 8m drop clears from 90km/h.
+    ['ramp', 40, 6],
+    ['straight', 24],
+    ['jump', 18, 3.4], // ~21deg
+    ['gap', 30, 8],
+    ['ramp', 44, -6],
+    ['straight', 80],
+    ['checkpoint'],
+
+    // THE STAIRS — three shelves down, each one a small launch off its edge.
+    // The shelf has to be LONGER than the flight off the shelf above it. The
+    // first cut used a 22m shelf behind a kicker that throws you 41m at
+    // racing speed, so you landed on the next kicker instead of the shelf and
+    // got fired sideways into the void. 9deg and 40m lands you on the deck
+    // from 100km/h all the way past 160.
+    ['jump', 10, 0.8], ['gap', 12, 3], ['straight', 40],
+    ['jump', 10, 0.8], ['gap', 12, 3], ['straight', 40],
+    ['jump', 10, 0.8], ['gap', 12, 3], ['straight', 60],
+
+    ['turn', -55, 100],
+    ['straight', 70],
+
+    // THE DOUBLE — land and immediately launch again, no time to gather it up
+    ['ramp', 34, 5],
+    ['jump', 22, 4.2],
+    ['ramp', 56, -11],
+    ['jump', 20, 3.8],
+    ['ramp', 62, -12],
+    ['straight', 90],
+    ['checkpoint'],
+
+    ['turn', 48, 120],
+    ['straight', 80],
+
+    // THE LEAP OF FAITH — the big one. Long climb, steep kicker, and a hole
+    // wide enough that the far side is over the horizon of the lip.
+    //
+    // Checkpointed at the foot of the climb on purpose. Miss this and you fall
+    // out of the world, and a respawn that left you without the run-up to try
+    // again would just loop forever — which is exactly what the first cut of
+    // this did. 42m with a 14m drop clears from 110km/h (50m of range) with
+    // room to spare, and from 130 (64m) with a lot.
+    ['checkpoint'],
+    ['straight', 90], // FLAT run-up. The first cut climbed 15m into this kicker
+    ['jump', 30, 6.4], // and the car arrived too slow to climb it at all, let
+    ['gap', 40, 16],   // alone jump. The drama is the drop, not the climb.
+    ['ramp', 70, -10],
+    ['straight', 110],
+
+    ['turn', -40, 130],
+    ['straight', 120],
+    ['finish'],
+  ],
+})
+
+export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL, STUNT_PARK]
 
 const TRACK_KEY = 'speed-racer:track'
 

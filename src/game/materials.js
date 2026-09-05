@@ -9,8 +9,7 @@ import {
   concreteMap,
   grassMap,
   kerbMap,
-  checkerMap,
-} from './textures.js'
+  checkerMap, hazardMap } from './textures.js'
 import { TRACK } from './track.js'
 
 let cache = null
@@ -70,6 +69,17 @@ export function trackMaterials() {
       roughness: 0.4,
     }),
     post: new THREE.MeshStandardMaterial({ color: '#7e8794', roughness: 0.6, metalness: 0.5 }),
+    hazard: new THREE.MeshStandardMaterial({
+      map: (() => {
+        const t = hazardMap()
+        t.repeat.set(4, 1)
+        return t
+      })(),
+      roughness: 0.5,
+      metalness: 0.1,
+      emissive: '#2a2410',
+      emissiveIntensity: 0.6,
+    }),
     metal: new THREE.MeshStandardMaterial({ color: '#98a1ae', roughness: 0.35, metalness: 0.9 }),
     grass: new THREE.MeshStandardMaterial({ map: grass, roughness: 1, metalness: 0 }),
     chevronL: new THREE.MeshStandardMaterial({ map: chevronMap(), roughness: 0.6 }),

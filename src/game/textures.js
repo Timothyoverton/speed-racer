@@ -212,6 +212,26 @@ export function chevronMap() {
 }
 
 // ---------------------------------------------------------------- checker ---
+// Diagonal hazard stripes — what marks the lip of a gap and the arch beams.
+export function hazardMap() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')
+  g.fillStyle = '#f4c518'
+  g.fillRect(0, 0, 128, 128)
+  g.strokeStyle = '#15171c'
+  g.lineWidth = 22
+  for (let i = -128; i < 256; i += 44) {
+    g.beginPath()
+    g.moveTo(i, 0)
+    g.lineTo(i + 128, 128)
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 export function checkerMap() {
   return make('checker', () => {
     const N = 128

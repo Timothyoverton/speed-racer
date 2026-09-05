@@ -43,6 +43,11 @@ function build(track) {
   const post = []
   const chevronL = []
   const chevronR = []
+  const hazard = []
+  const gateLeg = []
+  const gateBeam = []
+  const pylon = []
+  const pylonCap = []
   const stripeLColor = []
   const stripeRColor = []
   const wallColor = []
@@ -50,6 +55,8 @@ function build(track) {
   const rw = track.roadWidth
   const th = track.roadThick
   const top = th / 2 // local y of the road surface
+  // where the grass will sit — must match GROUND_Y below
+  const groundY = Math.min(...track.tiles.map((t) => t.pos[1])) - 0.1
 
   track.tiles.forEach((tile, i) => {
     const [w, h, len] = tile.size
@@ -110,6 +117,64 @@ function build(track) {
       }
     }
 
+    // --- gap furniture ------------------------------------------------------
+    // Where the road stops there is nothing at all: no barrier, no surface, no
+    // colour change. At 150km/h a hole reads as more road until you're in it,
+    // so mark both lips hard. This is as much fairness as decoration.
+    const next = track.tiles[i + 1]
+    if (next) {
+      const horiz = Math.cos(tile.pitch)
+      const dir = [Math.sin(tile.rot[1]) * horiz, Math.sin(tile.pitch), Math.cos(tile.rot[1]) * horiz]
+      const end = tile.pos.map((c, k) => c + (dir[k] * tile.size[2]) / 2)
+      const begin = next.pos.map((c, k) => c - (dir[k] * next.size[2]) / 2)
+      const across = Math.hypot(end[0] - begin[0], end[1] - begin[1], end[2] - begin[2])
+      if (across > 5) {
+        // hazard bar across the take-off lip, and again on the landing edge
+        place(hazard, tile, [0, top + 0.09, len / 2 - 0.7], [rw, 0.22, 1.4])
+        place(hazard, next, [0, next.size[1] / 2 + 0.09, -next.size[2] / 2 + 0.7], [rw, 0.22, 1.4])
+        // a gate over the lip: you aim at it, and it gives the jump a scale
+        for (const sd of [1, -1]) {
+          place(gateLeg, tile, [sd * (rw / 2 + WALL_W), top + 3.2, len / 2 - 0.4], [0.5, 6.4, 0.5])
+        }
+        place(gateBeam, tile, [0, top + 6.7, len / 2 - 0.4], [rw + 2 * WALL_W + 0.5, 1.0, 0.6])
+        // pylons stepping back from the edge on both sides, so the lip has depth
+        for (let k = 0; k < 4; k++) {
+          for (const sd of [1, -1]) {
+            place(hazard, tile, [sd * (rw / 2 - 0.6), top + 0.75, len / 2 - 1.8 - k * 3.4], [0.45, 1.5, 0.45])
+          }
+        }
+      }
+    }
+
+    // --- hold the thing up ----------------------------------------------------
+    // Freefall and Stunt Park run most of a lap high above the ground, and an
+    // elevated ribbon with nothing under it reads as a floating decal. Trestle
+    // legs down to the grass give the height somewhere to be measured against,
+    // which is most of what sells a drop.
+    if (i % 6 === 0) {
+      const deck = tile.pos[1] - th / 2
+      const h = deck - groundY
+      if (h > 2.5) {
+        const yaw = tile.rot[1]
+        // legs are vertical in WORLD space, not raked with the road's pitch
+        const rx = Math.cos(yaw)
+        const rz = -Math.sin(yaw)
+        for (const sd of [1, -1]) {
+          const off = sd * (rw / 2 - 1.2)
+          pylon.push({
+            p: [tile.pos[0] + rx * off, groundY + h / 2, tile.pos[2] + rz * off],
+            r: [0, yaw, 0],
+            s: [0.9, h, 0.9],
+          })
+        }
+        pylonCap.push({
+          p: [tile.pos[0], deck - 0.55, tile.pos[2]],
+          r: tile.rot,
+          s: [rw - 0.6, 1.1, 1.6],
+        })
+      }
+    }
+
     // marker posts every few tiles, outside the barrier
     if (i % 4 === 0) {
       for (const s of [1, -1]) {
@@ -120,7 +185,7 @@ function build(track) {
 
   return {
     road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
-    stripeLColor, stripeRColor, wallColor,
+    stripeLColor, stripeRColor, wallColor, hazard, gateLeg, gateBeam, pylon, pylonCap,
   }
 }
 

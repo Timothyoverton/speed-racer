@@ -38,18 +38,20 @@ export default function Track({ onFinish }) {
           const [w, h, l] = slab.size
           // how far this collider may stretch along its length — see padSlabs()
           const pad = slab.pad
+          // same reasoning as pad: don't hang a rail stub out over a void
+          const railPad = slab.atGap ? 0 : RAIL_OVERLAP
           const rw = TRACK.roadWidth
           return (
             <group key={i} position={slab.pos} rotation={[slab.rot[0], slab.rot[1], slab.rot[2], 'YXZ']}>
               <CuboidCollider args={[w / 2 + pad, h / 2, l / 2 + pad]} friction={0} restitution={0} />
               <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + RAIL_OVERLAP]}
+                args={[0.3, RAIL_H, l / 2 + railPad]}
                 position={[rw / 2 + 0.3, h / 2 + RAIL_H, 0]}
                 friction={0}
                 restitution={0.55}
               />
               <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + RAIL_OVERLAP]}
+                args={[0.3, RAIL_H, l / 2 + railPad]}
                 position={[-rw / 2 - 0.3, h / 2 + RAIL_H, 0]}
                 friction={0}
                 restitution={0.55}
@@ -70,6 +72,11 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
       <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
+      <Boxes items={VISUALS.pylon} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.pylonCap} material={mats.concrete} castShadow />
+      <Boxes items={VISUALS.hazard} material={mats.hazard} castShadow receiveShadow />
+      <Boxes items={VISUALS.gateLeg} material={mats.metal} castShadow />
+      <Boxes items={VISUALS.gateBeam} material={mats.hazard} castShadow />
 
       {/* start / finish road markings */}
       <RoadDecal
