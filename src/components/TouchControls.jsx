@@ -33,7 +33,11 @@ export default function TouchControls() {
   const [invert, setInvert] = useState(tilt.invert)
   const [state, setState] = useState({ active: tilt.active, permission: tilt.permission })
 
-  // paint the steering indicator off the tilt value, on its own rAF
+  // Paint the steering indicator on its own rAF, and keep an eye on whether
+  // tilt has come alive. Permission is granted asynchronously (and on iOS only
+  // after the DRIVE tap), which is usually *after* this component mounts — so
+  // a snapshot taken at mount would leave the fallback arrows on screen for
+  // ever, which is exactly what happened.
   useEffect(() => {
     let raf = 0
     const tick = () => {
@@ -41,6 +45,11 @@ export default function TouchControls() {
         const s = input.axis ?? 0
         needleRef.current.style.transform = `translateX(${(s * 76).toFixed(1)}px)`
       }
+      setState((prev) =>
+        prev.active === tilt.active && prev.permission === tilt.permission
+          ? prev
+          : { active: tilt.active, permission: tilt.permission },
+      )
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)

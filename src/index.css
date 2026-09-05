@@ -563,12 +563,15 @@ body.touch-mode .hud .timer {
   border-color: rgba(255, 77, 90, 0.5);
 }
 
+/* DRIFT sits by the BRAKE thumb, not the GO thumb — you often want full
+   throttle and handbrake at the same moment, and one thumb can't do both. */
 .touch .hand {
-  right: 168px;
+  left: 152px;
   bottom: 34px;
   width: 86px;
   height: 86px;
   font-size: 12px;
+  border-color: rgba(255, 207, 92, 0.5);
 }
 
 .touch .pad.small {
@@ -581,9 +584,11 @@ body.touch-mode .hud .timer {
 }
 
 /* fallback arrows, only when tilt isn't available */
+/* Only rendered when tilt is unavailable or refused — the freed-up slot beside
+   GO, since DRIFT has moved across. */
 .touch .tsteer {
   position: absolute;
-  left: 156px;
+  right: 170px;
   bottom: 30px;
   display: flex;
   gap: 12px;
