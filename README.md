@@ -43,7 +43,9 @@ _(after the repo + GitHub Pages are set up — see Deploy)_
 3. Clear all the **checkpoints** in order, then cross the finish line.
 4. `R` restarts instantly, from anywhere, any time — no menus. This is the
    whole game: fail fast, go again.
-5. Beat the medal times — **Bronze → Silver → Gold → Author**. Your best run is
+5. Beat the medal times — **Bronze → Silver → Gold → Author**. Every track's
+   medals are derived from a measured reference lap, so they mean the same
+   thing on all four (Author is ~58% off a perfect centreline lap). Your best run is
    saved as a **ghost**; the next run it drives beside you and the HUD shows
    whether you're ahead (green) or behind (red) it.
 
@@ -126,6 +128,38 @@ download, so the whole game is JS.
   gearbox), filtered noise for wind, road roar and tyre screech, plus countdown
   blips and a landing thud. Starts on the DRIVE click (browsers require a
   gesture); `M` or the HUD button mutes, and the choice is remembered.
+
+### Measuring a reference lap
+
+Medal times aren't guessed — each track's come from `medalsFor(refLapSec)` in
+`track.js`, where the reference lap is measured by driving the real physics with
+an autopilot. To re-measure after changing a layout:
+
+1. Open the dev server, pick the track, hit DRIVE, and let the countdown finish.
+2. Drive the sim yourself, stepping it by hand at a fixed 1/60:
+
+```js
+st.setFrameloop('never')
+let sec = st.clock.elapsedTime          // SECONDS, not milliseconds
+for (;;) { control(); sec += 1/60; st.advance(sec) }
+```
+
+The autopilot steers at a lookahead point on the centreline and brakes whenever
+a corner inside its scan needs a speed it can't decelerate to, using the game's
+own `v^2/20.8` radius rule. Lap time is the step count over 60. It's repeatable
+to ~0.2%.
+
+**Pass `advance()` a timestamp in SECONDS.** Under `frameloop: 'never'` R3F
+computes `delta = timestamp - clock.elapsedTime`, and `elapsedTime` is in
+seconds. Hand it `performance.now()` milliseconds and the delta is enormous,
+Rapier clamps it to 0.5s and substeps **30 physics steps per frame** — the car
+covers 76m in a "second", trips the stuck-respawn, and the lap time is fiction.
+Nothing warns you. Verify by counting `world.step` calls per `advance()`: it
+must be exactly 1.
+
+Also note the in-game timer is `performance.now()` wall-clock, so a hand-stepped
+lap needs `performance.now` stubbed to sim time or the recorded time is the
+wall-clock duration of your loop, not the lap.
 
 ### Key ideas
 

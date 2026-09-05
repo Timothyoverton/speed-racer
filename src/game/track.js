@@ -237,6 +237,28 @@ function padSlabs(slabs) {
   return slabs
 }
 
+// --- Medals ------------------------------------------------------------------
+// Medal times are derived from a REFERENCE LAP rather than hand-written, so all
+// four tracks sit at the same difficulty instead of drifting apart.
+//
+// The reference lap is the time an autopilot sets driving the exact centreline
+// with a perfect braking model and no mistakes — fast, but not a racing line,
+// since it never cuts an apex. Measured by stepping the real physics at a fixed
+// 1/60 (see README, "Measuring a reference lap").
+//
+// Author sits AUTHOR_FACTOR above that lap and the rest step down from Author.
+// These numbers regenerate Test Pad's original hand-tuned medals to the second,
+// which is why they're anchored here — retune every track with one constant.
+const AUTHOR_FACTOR = 1.58
+const MEDAL_SPREAD = { author: 1, gold: 1.25, silver: 1.583, bronze: 2.083 }
+
+function medalsFor(refLapSec) {
+  const author = refLapSec * 1000 * AUTHOR_FACTOR
+  const out = {}
+  for (const k in MEDAL_SPREAD) out[k] = Math.round((author * MEDAL_SPREAD[k]) / 1000) * 1000
+  return out
+}
+
 // --- Track 0: a wide, forgiving test pad ------------------------------------
 // Long straight (accel / top speed / braking), two big open sweepers, one
 // gentle jump. Hard to hit a wall — for feeling out the car, not for racing.
@@ -244,7 +266,7 @@ const TEST_PAD = buildTrack({
   id: 'test-pad-0',
   name: 'Test Pad',
   roadWidth: 30,
-  medals: { author: 24000, gold: 30000, silver: 38000, bronze: 50000 },
+  medals: medalsFor(15.17), // reference lap, measured
   course: [
     ['start'],
     ['straight', 100],
@@ -272,7 +294,7 @@ const SLIPSTREAM = buildTrack({
   name: 'Slipstream',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 30000, gold: 34000, silver: 40000, bronze: 50000 },
+  medals: medalsFor(26.8), // reference lap, measured
   course: [
     ['start'],
     ['straight', 90], // long launch
@@ -317,7 +339,7 @@ const QIDDIYA_RUSH = buildTrack({
   name: 'Qiddiya Rush',
   roadWidth: 20,
   // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 28000, gold: 32000, silver: 38000, bronze: 47000 },
+  medals: medalsFor(24.3), // reference lap, measured
   course: [
     ['start'],
     ['straight', 80], // long run-up, flat out
@@ -355,8 +377,7 @@ const FREEFALL = buildTrack({
   id: 'freefall-3',
   name: 'Freefall',
   roadWidth: 22, // wide — you land where you land
-  // estimates from the layout, not driven times — retune once there are laps
-  medals: { author: 70000, gold: 80000, silver: 94000, bronze: 115000 },
+  medals: medalsFor(60.28), // reference lap, measured
   course: [
     ['start'],
     ['straight', 130], // get everything you can before the first launch
