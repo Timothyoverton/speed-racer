@@ -8,6 +8,7 @@ import { getState } from '../game/store.js'
 import { smokeMap } from '../game/textures.js'
 
 const SMOKE = 200
+const DUST = 260
 const MARKS = 420
 const SLIP_ON = 0.16 // slip above this and the tyres start protesting
 const WHEEL_X = 0.94
@@ -37,6 +38,31 @@ const SMOKE_FS = /* glsl */ `
   }
 `
 
+// Smoke and dust share a shader but not a pool: dust is heavier, warmer and
+// lives longer, and one uColor can't be two colours.
+function makePool(n, colour) {
+  const pos = new Float32Array(n * 3)
+  const vel = new Float32Array(n * 3)
+  const size = new Float32Array(n)
+  const alpha = new Float32Array(n)
+  const life = new Float32Array(n)
+  for (let i = 0; i < n; i++) pos[i * 3 + 1] = -1000
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+  geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1))
+  geo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1))
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6)
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: smokeMap() }, uColor: { value: new THREE.Color(colour) } },
+    vertexShader: SMOKE_VS,
+    fragmentShader: SMOKE_FS,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.NormalBlending,
+  })
+  return { geo, mat, pos, vel, size, alpha, life, n }
+}
+
 export default function Effects() {
   const points = useRef(null)
   const marks = useRef(null)
@@ -44,6 +70,9 @@ export default function Effects() {
   const markCursor = useRef(0)
   const emitAcc = useRef(0)
   const wasAir = useRef(false)
+  const dustPoints = useRef(null)
+  const dustCursor = useRef(0)
+  const dustAcc = useRef(0)
 
   const smoke = useMemo(() => {
     const pos = new Float32Array(SMOKE * 3)
@@ -71,6 +100,8 @@ export default function Effects() {
     })
     return { geo, mat, pos, vel, size, alpha, life }
   }, [])
+
+  const dust = useMemo(() => makePool(DUST, '#b39469'), [])
 
   const markMat = useMemo(
     () =>
@@ -121,6 +152,74 @@ export default function Effects() {
       if (life[i] <= 0) {
         alpha[i] = 0
         pos[i3 + 1] = -1000
+      }
+    }
+
+    // --- dust ---------------------------------------------------------------
+    // Heavier than tyre smoke: it barely spreads, it sinks, and it hangs about.
+    {
+      const d = dust
+      for (let i = 0; i < d.n; i++) {
+        if (d.life[i] <= 0) continue
+        d.life[i] -= dt
+        const i3 = i * 3
+        d.pos[i3] += d.vel[i3] * dt
+        d.pos[i3 + 1] += d.vel[i3 + 1] * dt
+        d.pos[i3 + 2] += d.vel[i3 + 2] * dt
+        d.vel[i3] *= 1 - 0.9 * dt
+        d.vel[i3 + 2] *= 1 - 0.9 * dt
+        d.vel[i3 + 1] -= 1.7 * dt // settles rather than billowing away
+        d.size[i] += 2.4 * dt
+        d.alpha[i] = Math.max(d.life[i] / 2.2, 0) * 0.42
+        if (d.life[i] <= 0) {
+          d.alpha[i] = 0
+          d.pos[i3 + 1] = -1000
+        }
+      }
+
+      const spawn = (n, up, spread) => {
+        for (let k = 0; k < n; k++) {
+          const i = dustCursor.current
+          dustCursor.current = (dustCursor.current + 1) % d.n
+          const side = k % 2 === 0 ? 1 : -1
+          const i3 = i * 3
+          d.pos[i3] = s.pos[0] + s.right[0] * side * WHEEL_X + s.fwd[0] * WHEEL_Z
+          d.pos[i3 + 1] = s.pos[1] + CONTACT_Y + 0.15 + Math.random() * 0.25
+          d.pos[i3 + 2] = s.pos[2] + s.right[2] * side * WHEEL_X + s.fwd[2] * WHEEL_Z
+          d.vel[i3] = -s.fwd[0] * (1.5 + s.speed * 0.16) + (Math.random() - 0.5) * spread
+          d.vel[i3 + 1] = up * (0.6 + Math.random())
+          d.vel[i3 + 2] = -s.fwd[2] * (1.5 + s.speed * 0.16) + (Math.random() - 0.5) * spread
+          d.size[i] = 1.3 + Math.random() * 1.2
+          d.life[i] = 1.4 + Math.random() * 1.1
+          d.alpha[i] = 0.42
+        }
+      }
+
+      // There is no off-road: the barriers keep you on tarmac and there's no
+      // ground collider past them, so "driving on the dirt" is a state the car
+      // can't be in. Dust comes off the two surfaces that do exist.
+      //
+      // Kerbs — grit and marbles off the rumble strip, scaled by speed.
+      if (racing && s.onKerb && s.speed > 8) {
+        dustAcc.current += Math.min(s.speed * 0.55, 34) * dt
+        const n = Math.floor(dustAcc.current)
+        dustAcc.current -= n
+        spawn(n, 1.1, 1.8)
+      } else {
+        dustAcc.current = 0
+      }
+      // Landings — the big one. Freefall and Stunt Park put the car down hard
+      // from 2.5s in the air, and a burst out of the contact patches is what
+      // makes that read as weight.
+      if (racing && s.grounded && wasAir.current && s.landing > 0.3) {
+        spawn(Math.min(Math.round(s.landing * 26), 30), 2.4, 4.0)
+      }
+
+      const dg = dustPoints.current?.geometry
+      if (dg) {
+        dg.attributes.position.needsUpdate = true
+        dg.attributes.aSize.needsUpdate = true
+        dg.attributes.aAlpha.needsUpdate = true
       }
     }
 
@@ -208,6 +307,11 @@ export default function Effects() {
       <points ref={points} frustumCulled={false}>
         <primitive object={smoke.geo} attach="geometry" />
         <primitive object={smoke.mat} attach="material" />
+      </points>
+
+      <points ref={dustPoints} frustumCulled={false}>
+        <primitive object={dust.geo} attach="geometry" />
+        <primitive object={dust.mat} attach="material" />
       </points>
 
       <instancedMesh

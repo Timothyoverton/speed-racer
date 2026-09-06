@@ -107,7 +107,10 @@ function useCarGeometry() {
     rim.rotateZ(Math.PI / 2)
     const disc = new THREE.CylinderGeometry(0.25, 0.25, 0.045, 20)
     disc.rotateZ(Math.PI / 2)
-    const spoke = new THREE.BoxGeometry(0.09, 0.05, 0.25)
+    const spoke = new THREE.BoxGeometry(0.055, 0.045, 0.26)
+    // polished lip around the outer face — catches the sun as the wheel turns
+    const lip = new THREE.CylinderGeometry(0.305, 0.305, 0.05, 24)
+    lip.rotateZ(Math.PI / 2)
 
     return {
       bodyGeo: planExtrude(body, 0.34, 0.07),
@@ -116,6 +119,7 @@ function useCarGeometry() {
       rim,
       disc,
       spoke,
+      lip,
       blurDisc,
     }
   }, [])
@@ -148,28 +152,43 @@ function useMaterials(ghost, color) {
         tail: g('#8ffbd8', 0.3),
         disc: g('#8ffbd8', 0.2),
         blur: g('#8ffbd8', 0),
+        livery: g('#8ffbd8', 0.16),
+        caliper: g('#8ffbd8', 0.16),
         ghost: true,
       }
     }
     return {
       paint: new THREE.MeshPhysicalMaterial({
         color,
-        // Metallic paint at 0.9 takes the environment's colour more than its
-        // own — the blue car came out looking white against a bright sky.
-        // Lower metalness plus a strong clearcoat keeps the gloss but lets the
-        // pigment through.
-        metalness: 0.55,
-        roughness: 0.26,
+        // Metallic paint takes the environment's colour more than its own —
+        // the blue car came out looking white against a bright sky.
+        //
+        // Re-tuned after the sky rework. THE CAR AND THE SKY ARE COUPLED: a
+        // brighter sky and a visible sun push more energy into the env map, and
+        // a dark glossy panel is a mirror, so the roof and the deck went back to
+        // reading as blank white paper. If you touch the sky, look at the car
+        // afterwards from a rear three-quarter — the flanks stay blue and hide
+        // it, the horizontal surfaces are where it shows.
+        metalness: 0.5,
+        roughness: 0.28,
         clearcoat: 1,
-        clearcoatRoughness: 0.05,
-        envMapIntensity: 1.35,
+        clearcoatRoughness: 0.08,
+        envMapIntensity: 0.85,
       }),
+      // The canopy is the worst offender: nearly black, nearly horizontal, and
+      // pointed straight at the sky, so any gloss at all turns it into a mirror
+      // of a big uniform bright dome and it renders as a blank white panel.
+      // ROUGHNESS is the lever that matters here, not envMapIntensity — 0.62
+      // still washed out completely with env at 0.22; 0.9 holds. Verified by
+      // raycasting the pixel to confirm which mesh it actually was, after three
+      // wrong guesses (paint, ghost car, livery decals).
       trim: new THREE.MeshPhysicalMaterial({
-        color: '#0e131d',
-        metalness: 0.4,
-        roughness: 0.35,
-        clearcoat: 0.8,
-        envMapIntensity: 1.2,
+        color: '#1a2130',
+        metalness: 0,
+        roughness: 0.9,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.5,
+        envMapIntensity: 0.15,
       }),
       glass: new THREE.MeshPhysicalMaterial({
         color: '#101c2c',
@@ -179,6 +198,22 @@ function useMaterials(ghost, color) {
         opacity: 0.62,
         clearcoat: 1,
         envMapIntensity: 2.4,
+      }),
+      // Livery. A single flat colour reads as a bath toy from the chase camera,
+      // and the body is an ExtrudeGeometry whose UVs aren't worth fighting, so
+      // the stripes are thin geometry laid over the shell instead of a texture.
+      livery: new THREE.MeshPhysicalMaterial({
+        color: '#f2f5fa',
+        metalness: 0.3,
+        roughness: 0.3,
+        clearcoat: 1,
+        clearcoatRoughness: 0.06,
+        envMapIntensity: 1.3,
+      }),
+      caliper: new THREE.MeshStandardMaterial({
+        color: '#c8342c',
+        metalness: 0.5,
+        roughness: 0.45,
       }),
       carbon: new THREE.MeshStandardMaterial({
         color: '#15181f',
@@ -235,16 +270,22 @@ function Wheel({ geo, mat, position, steerRef, spinRef, flip = false }) {
   return (
     <group position={position}>
       <group ref={steerRef}>
+        {/* The caliper is bolted to the upright, so it must sit OUTSIDE the
+            spinning group — inside it, the brakes rotate with the wheel. */}
+        <mesh position={[0, 0.19, -0.1]} castShadow>
+          <boxGeometry args={[0.11, 0.15, 0.17]} />
+          <primitive object={mat.caliper} attach="material" />
+        </mesh>
         <group ref={spinRef} rotation={[0, flip ? Math.PI : 0, 0]}>
           <mesh geometry={geo.tyre} material={mat.tyre} castShadow />
           <mesh geometry={geo.rim} material={mat.rim} castShadow />
-          {[0, 1, 2, 3, 4].map((i) => (
+          <mesh geometry={geo.lip} material={mat.rim} position={[0.15, 0, 0]} />
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
             <mesh
               key={i}
               geometry={geo.spoke}
               material={mat.rim}
-              position={[0, 0, 0]}
-              rotation={[(i / 5) * Math.PI * 2, 0, 0]}
+              rotation={[(i / 10) * Math.PI * 2, 0, 0]}
             />
           ))}
           <mesh geometry={geo.disc} material={mat.disc} scale={[0.7, 1, 1]} />
@@ -333,6 +374,36 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
           <primitive object={mat.carbon} attach="material" />
         </mesh>
 
+        {/* Livery: twin stripes over the spine and a nose flash. Sits a hair
+            proud of the shell and follows its curve in steps, which is enough
+            to read as paint at any distance you actually see the car from. */}
+        {[1, -1].map((sd) => (
+          <group key={sd}>
+            <mesh position={[sd * 0.2, 0.005, 1.62]} rotation={[-0.22, 0, 0]}>
+              <boxGeometry args={[0.2, 0.015, 0.5]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+            <mesh position={[sd * 0.2, 0.075, 1.2]} rotation={[-0.05, 0, 0]}>
+              <boxGeometry args={[0.2, 0.015, 0.42]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+            <mesh position={[sd * 0.2, 0.04, -1.34]} rotation={[0.12, 0, 0]}>
+              <boxGeometry args={[0.2, 0.015, 0.62]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+            {/* haunch flash, angled back along the body line */}
+            <mesh position={[sd * 0.7, -0.16, -0.72]} rotation={[0, 0, sd * 0.22]}>
+              <boxGeometry args={[0.015, 0.1, 1.0]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+          </group>
+        ))}
+        {/* nose flash */}
+        <mesh position={[0, -0.16, 1.94]} rotation={[0.1, 0, 0]}>
+          <boxGeometry args={[0.5, 0.09, 0.16]} />
+          <primitive object={mat.livery} attach="material" />
+        </mesh>
+
         {/* greenhouse + glass */}
         <mesh geometry={geo.cabinGeo} position={[0, -0.02, -0.06]} castShadow>
           <primitive object={mat.trim} attach="material" />
@@ -363,22 +434,47 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
             <primitive object={mat.carbon} attach="material" />
           </mesh>
         ))}
-        {/* rear diffuser */}
+        {/* rear diffuser, with strakes — you stare straight at these */}
         <mesh position={[0, -0.31, -1.9]} rotation={[0.24, 0, 0]} castShadow>
           <boxGeometry args={[1.2, 0.07, 0.42]} />
           <primitive object={mat.carbon} attach="material" />
         </mesh>
-
-        {/* rear wing */}
-        <mesh position={[0, 0.34, -1.82]} rotation={[0.17, 0, 0]} castShadow>
-          <boxGeometry args={[1.7, 0.05, 0.4]} />
-          <primitive object={mat.carbon} attach="material" />
-        </mesh>
-        {[1, -1].map((s) => (
-          <mesh key={s} position={[s * 0.78, 0.14, -1.82]} castShadow>
-            <boxGeometry args={[0.06, 0.42, 0.4]} />
+        {[-0.42, -0.14, 0.14, 0.42].map((x) => (
+          <mesh key={x} position={[x, -0.25, -1.92]} rotation={[0.24, 0, 0]} castShadow>
+            <boxGeometry args={[0.03, 0.16, 0.4]} />
             <primitive object={mat.carbon} attach="material" />
           </mesh>
+        ))}
+
+        {/* Rear wing — the signature from a chase camera, so it earns the
+            extra boxes: a two-element stack, endplates that stand proud of
+            both, and swan-neck mounts off the deck. */}
+        <mesh position={[0, 0.38, -1.8]} rotation={[0.19, 0, 0]} castShadow>
+          <boxGeometry args={[1.72, 0.045, 0.36]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        <mesh position={[0, 0.25, -1.9]} rotation={[0.34, 0, 0]} castShadow>
+          <boxGeometry args={[1.66, 0.035, 0.19]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        {[1, -1].map((sd) => (
+          <group key={sd}>
+            {/* carbon plate with a livery edge — all-white endplates this size
+                read as paddles bolted to the back of the car */}
+            <mesh position={[sd * 0.86, 0.3, -1.84]} castShadow>
+              <boxGeometry args={[0.03, 0.36, 0.46]} />
+              <primitive object={mat.carbon} attach="material" />
+            </mesh>
+            <mesh position={[sd * 0.868, 0.44, -1.84]}>
+              <boxGeometry args={[0.034, 0.07, 0.46]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+            {/* swan-neck: mount over the wing, not under it */}
+            <mesh position={[sd * 0.34, 0.2, -1.7]} rotation={[0.2, 0, 0]} castShadow>
+              <boxGeometry args={[0.05, 0.34, 0.05]} />
+              <primitive object={mat.carbon} attach="material" />
+            </mesh>
+          </group>
         ))}
 
         {/* head + tail lights */}
