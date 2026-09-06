@@ -9,9 +9,9 @@ import * as THREE from 'three'
 import { carState } from '../game/carState.js'
 
 const WHEEL_R = 0.42
-const TRACK_HALF = 0.95 // wheels sit proud of the bodywork, like a race car
-const WHEELBASE_F = 1.34
-const WHEELBASE_R = -1.36
+const TRACK_HALF = 0.95 // the tub is 0.16-0.21 wide at the axles, so these stand clear
+const WHEELBASE_F = 1.48
+const WHEELBASE_R = -1.42
 const WHEEL_Y = -0.16 // puts the contact patch at -0.58, just under the collider
 
 // --- geometry helpers -------------------------------------------------------
@@ -62,27 +62,39 @@ function mirroredShape(points) {
 function useCarGeometry() {
   return useMemo(() => {
     // main body plan: pointed nose, waisted over the wheels, wide haunches
+    // An F1 plan, not a sports-car plan. The old shape was a closed shell whose
+    // widest point (0.86) sat 9cm inside the wheels — so the wheels were half
+    // swallowed and the car read as a covered prototype. A real F1 car is
+    // OPEN WHEEL: a slim tub with a nose boom, sidepods that bulge only
+    // BETWEEN the axles, and a coke-bottle taper to a narrow gearbox, with the
+    // wheels standing right out in the air on exposed wishbones.
+    //
+    // Reference proportions (Wikipedia, Formula One car): 5.6m x 2.0m x 0.95m
+    // overall — so length:width ~2.8, and the body is far narrower than the
+    // track. Scaled here to a 4.6m body on a 1.9m track.
     const body = mirroredShape([
-      [0.0, 2.12],
-      [0.42, 1.62, 0.18, 2.02],
-      [0.8, 1.34, 0.66, 1.5], // front arch
-      [0.78, 1.02, 0.82, 1.2],
-      [0.64, 0.3, 0.66, 0.66], // waist, so the wheels stand proud
-      [0.68, -0.7, 0.62, -0.2],
-      [0.86, -1.32, 0.84, -1.0], // rear haunch
-      [0.8, -1.86, 0.86, -1.7],
-      [0.5, -2.06, 0.66, -2.05],
-      [0.0, -2.1],
+      [0.0, 2.4],
+      [0.13, 2.02, 0.05, 2.3], // nose boom, barely wider than a leg
+      [0.16, 1.48, 0.15, 1.75], // front axle line — nothing here but tub
+      [0.21, 0.98, 0.18, 1.24],
+      [0.32, 0.66, 0.26, 0.8], // cockpit sides
+      [0.38, 0.18, 0.36, 0.42],
+      [0.7, -0.14, 0.66, -0.02], // sidepod, and this is the widest it ever gets
+      [0.68, -0.8, 0.72, -0.5],
+      [0.38, -1.3, 0.58, -1.12], // coke bottle in to the rear axle
+      [0.25, -1.8, 0.27, -1.55],
+      [0.21, -2.14, 0.23, -2.0], // gearbox
+      [0.0, -2.2],
     ])
 
     // greenhouse: a long, low canopy rather than a bubble
     const cabin = mirroredShape([
-      [0.0, 0.98],
-      [0.3, 0.62, 0.16, 0.92],
-      [0.44, 0.05, 0.44, 0.34],
-      [0.45, -0.72, 0.46, -0.4],
-      [0.3, -1.16, 0.42, -1.08],
-      [0.0, -1.24],
+      [0.0, 0.86],
+      [0.19, 0.56, 0.1, 0.8],
+      [0.27, 0.06, 0.27, 0.32],
+      [0.28, -0.5, 0.29, -0.24],
+      [0.2, -0.86, 0.27, -0.78],
+      [0.0, -0.94],
     ])
 
     // tyre cross-section, revolved — rounded shoulders, not a flat cylinder
@@ -451,6 +463,52 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
         {/* roof intake */}
         <mesh position={[0, 0.17, -0.66]} rotation={[0.1, 0, 0]} castShadow>
           <boxGeometry args={[0.3, 0.12, 0.5]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+
+        {/* Exposed suspension. Open-wheel cars connect the wheels to the tub
+            with visible wishbones, and without them the wheels just float
+            beside the body — which is what the first pass looked like. */}
+        {[[WHEELBASE_F, 0.34], [WHEELBASE_R, 0.5]].map(([z, tubX]) => (
+          <group key={z}>
+            {[1, -1].map((sd) => (
+              <group key={sd}>
+                <mesh position={[sd * (TRACK_HALF + tubX) / 2, -0.2, z + 0.16]} rotation={[0, sd * 0.28, 0]} castShadow>
+                  <boxGeometry args={[TRACK_HALF - tubX + 0.3, 0.055, 0.09]} />
+                  <primitive object={mat.carbon} attach="material" />
+                </mesh>
+                <mesh position={[sd * (TRACK_HALF + tubX) / 2, -0.38, z - 0.1]} rotation={[0, -sd * 0.22, 0]} castShadow>
+                  <boxGeometry args={[TRACK_HALF - tubX + 0.3, 0.055, 0.09]} />
+                  <primitive object={mat.carbon} attach="material" />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        ))}
+
+        {/* Airbox over the driver's head, feeding the engine — the tall fin
+            behind the helmet that makes an F1 car unmistakable from behind. */}
+        <mesh position={[0, 0.3, -0.62]} rotation={[0.14, 0, 0]} castShadow>
+          <boxGeometry args={[0.26, 0.34, 0.86]} />
+          <primitive object={mat.trim} attach="material" />
+        </mesh>
+        <mesh position={[0, 0.36, -0.26]} rotation={[0.3, 0, 0]}>
+          <boxGeometry args={[0.19, 0.17, 0.14]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        {/* engine cover fin running back to the wing */}
+        <mesh position={[0, 0.14, -1.42]} castShadow>
+          <boxGeometry args={[0.05, 0.3, 1.5]} />
+          <primitive object={mat.livery} attach="material" />
+        </mesh>
+
+        {/* Halo. Mandatory on a modern F1 car and very visible from behind. */}
+        <mesh position={[0, 0.3, 0.24]} rotation={[0.2, 0, 0]}>
+          <torusGeometry args={[0.33, 0.028, 8, 20, Math.PI]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        <mesh position={[0, 0.22, 0.58]} rotation={[0.5, 0, 0]}>
+          <boxGeometry args={[0.05, 0.24, 0.05]} />
           <primitive object={mat.carbon} attach="material" />
         </mesh>
 
