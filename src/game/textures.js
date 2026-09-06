@@ -232,6 +232,36 @@ export function hazardMap() {
   return t
 }
 
+// Brick, for the blocks you have to go around. They were plain concrete and
+// at distance you couldn't tell them from the launch ramp — which is a fairness
+// problem, not a decoration one, since one you drive up and one ends your run.
+export function brickMap() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const g = c.getContext('2d')
+  g.fillStyle = '#3b2b26' // mortar
+  g.fillRect(0, 0, 256, 256)
+  const bw = 64
+  const bh = 32
+  for (let row = 0; row < 8; row++) {
+    const off = row % 2 ? -bw / 2 : 0
+    for (let col = -1; col < 5; col++) {
+      const x = col * bw + off + 2
+      const y = row * bh + 2
+      // vary each brick a little so it isn't a printed grid
+      const v = 0.82 + Math.random() * 0.32
+      const r = Math.round(150 * v)
+      const gg = Math.round(66 * v)
+      const b = Math.round(52 * v)
+      g.fillStyle = `rgb(${r},${gg},${b})`
+      g.fillRect(x, y, bw - 4, bh - 4)
+    }
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 export function checkerMap() {
   return make('checker', () => {
     const N = 128

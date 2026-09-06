@@ -141,14 +141,16 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
       <Boxes items={VISUALS.fallWater} material={mats.fallWater} />
       <Boxes items={VISUALS.fallMist} material={mats.mist} />
-      <Boxes items={VISUALS.rampDeck} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.rampDeck} material={mats.rampTop} castShadow receiveShadow />
+      <Boxes items={VISUALS.rampLine} material={mats.line} />
+      <Boxes items={VISUALS.rampDash} material={mats.line} />
       <Boxes items={VISUALS.rampStripe} material={mats.hazard} castShadow />
       <Boxes items={VISUALS.poolWall} material={mats.poolTile} receiveShadow />
       <Boxes items={VISUALS.poolWater} material={mats.water} />
       <Sharks pools={TRACK.pools} />
       <Boxes items={VISUALS.boostPad} material={mats.boostPad} />
       <Boxes items={VISUALS.boostArrow} material={mats.boostArrow} />
-      <Boxes items={VISUALS.wallBlock} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.wallBlock} material={mats.brick} castShadow receiveShadow />
       <Boxes items={VISUALS.wallStripe} material={mats.hazard} castShadow />
       <Boxes items={VISUALS.pylon} material={mats.concrete} castShadow receiveShadow />
       <Boxes items={VISUALS.pylonCap} material={mats.concrete} castShadow />

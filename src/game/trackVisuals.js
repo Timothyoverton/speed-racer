@@ -56,6 +56,8 @@ function build(track) {
   const poolWall = []
   const rampDeck = []
   const rampStripe = []
+  const rampLine = []
+  const rampDash = []
   const fallWater = []
   const fallMist = []
   const stripeLColor = []
@@ -250,6 +252,38 @@ function build(track) {
       r: [0, r.yaw, 0],
       s: [r.size[0], 0.28, 0.4],
     })
+
+    // Paint the ramp like road: edge lines up both sides and a dashed centre,
+    // carrying the road's own markings up and over the lip. Without this it's
+    // a grey slab and reads exactly like the brick block beside it.
+    const fx = Math.sin(r.yaw)
+    const fz = Math.cos(r.yaw)
+    const rx = Math.cos(r.yaw)
+    const rz = -Math.sin(r.yaw)
+    const cp = Math.cos(r.pitch)
+    const sp = Math.sin(r.pitch)
+    const surf = 0.18 / cp // just proud of the deck
+    const at = (along, side) => [
+      r.start[0] + fx * along * cp + rx * side,
+      r.start[1] + sp * along + surf,
+      r.start[2] + fz * along * cp + rz * side,
+    ]
+    const slope = Math.hypot(r.len, r.rise)
+    for (const side of [1, -1]) {
+      rampLine.push({
+        p: at(slope / 2, side * (r.size[0] / 2 - 0.25)),
+        r: [-r.pitch, r.yaw, 0],
+        s: [0.18, 0.03, slope],
+      })
+    }
+    const dashes = Math.max(2, Math.round(slope / 2.4))
+    for (let k = 0; k < dashes; k++) {
+      rampDash.push({
+        p: at((k + 0.5) * (slope / dashes), 0),
+        r: [-r.pitch, r.yaw, 0],
+        s: [0.16, 0.03, slope / dashes / 2],
+      })
+    }
   }
 
   // Waterfalls: a curtain you fly through. No collider — it's weather, not a
@@ -268,7 +302,7 @@ function build(track) {
   return {
     road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
     wallBlock, wallStripe, boostPad, boostArrow, poolWater, poolWall,
-    rampDeck, rampStripe, fallWater, fallMist,
+    rampDeck, rampStripe, rampLine, rampDash, fallWater, fallMist,
     stripeLColor, stripeRColor, wallColor, hazard, gateLeg, gateBeam, pylon, pylonCap,
   }
 }

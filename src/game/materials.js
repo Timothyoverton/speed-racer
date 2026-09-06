@@ -9,7 +9,7 @@ import {
   concreteMap,
   grassMap,
   kerbMap,
-  checkerMap, hazardMap } from './textures.js'
+  checkerMap, hazardMap, brickMap } from './textures.js'
 import { TRACK } from './track.js'
 
 let cache = null
@@ -93,6 +93,26 @@ export function trackMaterials() {
     }),
     poolTile: new THREE.MeshStandardMaterial({ color: '#cfe6f2', roughness: 0.7, metalness: 0.05 }),
     shark: new THREE.MeshStandardMaterial({ color: '#39434f', roughness: 0.75, metalness: 0.1 }),
+    brick: new THREE.MeshStandardMaterial({
+      map: (() => {
+        const t = brickMap()
+        t.repeat.set(3, 1)
+        return t
+      })(),
+      roughness: 0.95,
+      metalness: 0,
+    }),
+    // the ramp gets real tarmac, so it reads as something you drive on
+    rampTop: new THREE.MeshStandardMaterial({
+      map: (() => {
+        const t = asphaltMap()
+        t.repeat.set(1, 3)
+        return t
+      })(),
+      color: '#8c8f96',
+      roughness: 0.94,
+      metalness: 0.02,
+    }),
     fallWater: new THREE.MeshPhysicalMaterial({
       color: '#bfe4f2',
       transparent: true,

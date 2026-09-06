@@ -176,16 +176,40 @@ class Turtle {
     const fz = Math.cos(this.heading)
     const pitch = Math.atan2(rise, len)
     const slope = Math.hypot(len, rise)
+    const THICK = 0.35
+    // A slab rotated about its own centre puts its top face HALF A THICKNESS
+    // above the road at the low end — a 17cm vertical step. The car is
+    // yaw-locked, so it can't tilt onto a step; it just stops dead against it.
+    // That's what made this ramp impassable.
+    //
+    // Two fixes together, the same ones `_placeTile` uses for road tiles:
+    //  - sink the slab by half its thickness measured PERPENDICULAR to the
+    //    slope, so the top face passes exactly through road level, and
+    //  - start it BURIED, 3m of slope back inside the road, so the face
+    //    emerges through the road plane as a feather edge with no lip at all.
+    const BURIED = 3
+    const sink = THICK / 2 / Math.cos(pitch)
+    const total = slope + BURIED
+    // unit vector up the slope
+    const sx = fx * Math.cos(pitch)
+    const sy = Math.sin(pitch)
+    const sz = fz * Math.cos(pitch)
+    // centre of the extended slab, measured from the nominal start on the road
+    const mid = (slope - BURIED) / 2
     this.ramps.push({
       pos: [
-        this.x + rx * lateral + fx * (len / 2),
-        this.y + rise / 2,
-        this.z + rz * lateral + fz * (len / 2),
+        this.x + rx * lateral + sx * mid,
+        this.y + sy * mid - sink,
+        this.z + rz * lateral + sz * mid,
       ],
       yaw: this.heading,
       pitch,
-      size: [width, 0.35, slope],
-      // where the lip is, for the visuals to flag
+      size: [width, THICK, total],
+      // the driveable part starts here, at road level — visuals use this so the
+      // asphalt doesn't get painted onto the buried section
+      start: [this.x + rx * lateral, this.y, this.z + rz * lateral],
+      len,
+      rise,
       lip: [this.x + rx * lateral + fx * len, this.y + rise, this.z + rz * lateral + fz * len],
       exitDeg: (pitch * 180) / Math.PI,
     })
