@@ -16,6 +16,8 @@ export default function Hud() {
   const hbRef = useRef(null)
   const topRef = useRef(null)
   const airRef = useRef(null)
+  const boostRef = useRef(null)
+  const boostNumRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -46,6 +48,11 @@ export default function Hud() {
         airRef.current.parentNode.style.opacity = flying ? '1' : '0'
         if (flying) airRef.current.textContent = hud.airTime.toFixed(1) + 's'
       }
+      if (boostRef.current) {
+        const on = hud.boost > 0.02
+        boostRef.current.style.opacity = on ? '1' : '0'
+        if (on) boostNumRef.current.textContent = hud.boost.toFixed(1) + 's'
+      }
       const d = deltaRef.current
       if (d) {
         if (hud.ghostDeltaMs == null) {
@@ -66,6 +73,7 @@ export default function Hud() {
     <div className="hud">
       <div className="rush" ref={rushRef} />
       <div className="airtime"><span>AIRBORNE</span><b ref={airRef}>0.0s</b></div>
+      <div className="boost" ref={boostRef}><span>BOOST</span><b ref={boostNumRef}>0.0s</b></div>
 
       <div className="timer">
         <span ref={timeRef}>0:00.000</span>

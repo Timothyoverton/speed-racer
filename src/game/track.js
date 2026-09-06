@@ -34,6 +34,8 @@ class Turtle {
     this.walls = []
     this.boosts = []
     this.pools = []
+    this.ramps = []
+    this.falls = []
     this.start = null
     this.finish = null
   }
@@ -160,6 +162,36 @@ class Turtle {
     return this
   }
 
+  // A launch ramp sitting ON the road, covering only part of its width — a
+  // wedge you drive up. Pair it with a wall on the other half and the jump
+  // becomes a choice you can get wrong: take the ramp and fly, miss it and
+  // you're into the block.
+  //
+  // It's a tilted slab rather than a true wedge because Rapier has no wedge
+  // primitive; the car climbs its top face exactly as it would a real ramp.
+  stuntRamp(lateral, width, len, rise) {
+    const rx = Math.cos(this.heading)
+    const rz = -Math.sin(this.heading)
+    const fx = Math.sin(this.heading)
+    const fz = Math.cos(this.heading)
+    const pitch = Math.atan2(rise, len)
+    const slope = Math.hypot(len, rise)
+    this.ramps.push({
+      pos: [
+        this.x + rx * lateral + fx * (len / 2),
+        this.y + rise / 2,
+        this.z + rz * lateral + fz * (len / 2),
+      ],
+      yaw: this.heading,
+      pitch,
+      size: [width, 0.35, slope],
+      // where the lip is, for the visuals to flag
+      lip: [this.x + rx * lateral + fx * len, this.y + rise, this.z + rz * lateral + fz * len],
+      exitDeg: (pitch * 180) / Math.PI,
+    })
+    return this
+  }
+
   // A swimming pool: a gap with something to look at in the bottom of it. The
   // road stops exactly as it does over a void, so the physics is identical —
   // you clear it or you don't — but you can see what you're clearing, which is
@@ -174,6 +206,12 @@ class Turtle {
       yaw: this.heading,
       size: [this.w + 10, dist],
     })
+    return this
+  }
+
+  // A waterfall curtain across the road. Purely something to fly through.
+  waterfall(width = 40) {
+    this.falls.push({ pos: [this.x, this.y, this.z], yaw: this.heading, width })
     return this
   }
 
@@ -205,7 +243,7 @@ class Turtle {
 
 function buildTrack({ id, name, roadWidth, medals, course }) {
   const t = new Turtle(roadWidth)
-  for (const [cmd, a, b, c] of course) {
+  for (const [cmd, a, b, c, d] of course) {
     if (cmd === 'start') t.markStart()
     else if (cmd === 'finish') t.markFinish()
     else if (cmd === 'checkpoint') t.checkpoint()
@@ -216,6 +254,8 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     else if (cmd === 'wall') t.wall(a, b, c)
     else if (cmd === 'boost') t.boost()
     else if (cmd === 'pool') t.pool(a, b)
+    else if (cmd === 'stuntramp') t.stuntRamp(a, b, c, d)
+    else if (cmd === 'waterfall') t.waterfall(a)
     else if (cmd === 'turn') t.turn(a, b)
   }
   return {
@@ -231,6 +271,8 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     walls: t.walls,
     boosts: t.boosts,
     pools: t.pools,
+    ramps: t.ramps,
+    falls: t.falls,
     start: t.start,
     finish: t.finish,
     length: t.dist,
@@ -623,91 +665,75 @@ const MISSION_IMPOSSIBLE = buildTrack({
   id: 'mission-impossible-5',
   name: 'Mission Impossible',
   roadWidth: 14,
-  medals: medalsFor(63.05), // reference lap, measured
+  // ESTIMATE, not measured: 63.05s was the reference lap for the previous
+  // layout of this track. The autopilot can't drive the new one — it has no
+  // concept of aiming at a stunt ramp, so it takes the wall every time. Re-measure
+  // once the harness can pick a ramp, or off a real lap.
+  medals: medalsFor(63),
   course: [
     ['start'],
-    ['straight', 120],
+    ['straight', 110],
     ['boost'],
-    ['straight', 40],
-    ['jump', 26, 4.6], // opener, straight into it
+    ['straight', 50],
+    ['jump', 26, 4.6],
     ['gap', 38, 9],
     ['ramp', 40, -6],
-    ['straight', 50],
+    ['straight', 60],
     ['checkpoint'],
 
-    // THE SLALOM — solid blocks, alternating sides, taken at whatever you dare.
-    // Each block overlaps the centreline on purpose: the first cut left a clear
-    // channel straight up the middle, so you could ignore the whole section.
-    // 60m between blocks, not 34: blocking the centreline on a 14m road leaves
-    // a 6.5m channel, so consecutive blocks demand a ~7m lateral shift. At
-    // 150km/h that needs ~22 m/s^2 over 34m — past what the car has — and the
-    // section could only be taken at a crawl. 60m brings it to ~7 m/s^2.
+    // THE SLALOM — once, not twice. Blocks overlap the centreline so there's
+    // no lazy line through the middle, and they're 60m apart because the ~7m
+    // shift between them needs the room.
     ['straight', 40],
     ['wall', 3.5, 8, 2.4],
     ['straight', 60],
     ['wall', -3.5, 8, 2.4],
     ['straight', 60],
     ['wall', 3.5, 8, 2.4],
-    ['straight', 60],
-    ['wall', -3.5, 8, 2.4],
-    ['straight', 70],
-    ['turn', 40, 120],
-    ['straight', 50],
-
-    // THE POOL — clear it or swim. Wide enough to need the run-up.
-    ['ramp', 34, 4],
-    ['jump', 22, 4.4],
-    ['pool', 44, 10],
-    ['ramp', 46, -7],
-    ['straight', 70],
-    ['checkpoint'],
-
-    // THE GAUNTLET — a wall right where you land, so the landing has to be
-    // aimed rather than survived
-    ['jump', 18, 2.6],
-    ['gap', 20, 5],
-    // 55m, not 26: you land from the gap still settling, and a block that
-    // close is a coin flip rather than a test — the car gets deflected off the
-    // corner of it and thrown clean off the track.
-    ['straight', 55],
-    ['wall', -3.4, 7.6, 2.6],
-    ['straight', 55],
-    ['turn', -50, 105],
-    ['straight', 40],
-    ['boost'],
-    ['straight', 30],
-
-    // THE BIG ONE — 60m of nothing, and it only goes if you took the pad
-    // Flat run-up. A 7m climb into this kicker left the car arriving too slow
-    // to clear its own gap — the exact rule this project already learned on
-    // Freefall's Leap of Faith, and I broke it again here.
-    ['straight', 44],
-    ['jump', 32, 7.4], // ~25deg
-    ['gap', 62, 20], // ~120km/h with the pad; 78m needed 138 and was a lottery
-    ['ramp', 80, -14],
     ['straight', 90],
+    ['turn', 40, 120],
+    ['straight', 70],
+
+    // THE CHOICE — a launch ramp on the left half, a solid block on the right.
+    // Take the ramp and you sail the shark pool. Miss it and you hit the wall.
+    // Nothing else on any track makes you pick a line this early.
+    ['boost'],
+    ['straight', 60],
+    ['stuntramp', -3.5, 7, 16, 3.4],
+    ['wall', 3.5, 7, 2.6],
+    ['straight', 16],
+    ['pool', 40, 12],
+    ['ramp', 46, -7],
+    ['straight', 80],
     ['checkpoint'],
 
-    // These two blocks used to sit right on the exit of the corner above, and
-    // the car arrived still rotating with nowhere to put itself. Pushed well
-    // down the straight so the corner and the slalom are separate problems.
-    ['turn', 45, 115],
-    ['straight', 110],
-    ['wall', 3.3, 7.4, 2.4],
-    ['straight', 65],
+    ['turn', -45, 110],
+    ['straight', 90],
+
+    // THE WATERFALL — huge jump straight through the curtain
+    ['boost'],
+    ['straight', 60],
+    ['jump', 32, 7.4], // ~25deg
+    ['waterfall', 46],
+    ['gap', 62, 20],
+    ['ramp', 80, -14],
+    ['straight', 100],
+    ['checkpoint'],
+
+    ['turn', 45, 120],
+    ['straight', 120],
     ['wall', -3.3, 7.4, 2.4],
-    ['straight', 80],
+    ['straight', 90],
+
+    // THE LAST WORD — the biggest drop in the game
     ['boost'],
     ['straight', 46],
-
-    // THE LAST WORD — the biggest drop on any track, off the steepest kicker
-    ['straight', 40],
     ['jump', 30, 7.0],
-    ['gap', 72, 26], // still the hardest jump in the game, ~125km/h minimum
+    ['gap', 72, 26],
     ['ramp', 90, -16],
-    ['straight', 120],
+    ['straight', 110],
     ['turn', -38, 130],
-    ['straight', 130],
+    ['straight', 120],
     ['finish'],
   ],
 })

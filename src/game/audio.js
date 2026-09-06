@@ -249,6 +249,55 @@ export function blip(freq = 660, duration = 0.12, gain = 0.16) {
   osc.stop(ctx.currentTime + duration + 0.02)
 }
 
+// NOS. A hiss that opens and closes, over a tone that sweeps up and keeps
+// going — the point is that you hear the shove rather than having to watch the
+// speedo to notice it happened.
+export function boostWhoosh() {
+  if (!running || !ctx || muted) return
+  const t0 = ctx.currentTime
+  // pressurised hiss
+  const len = Math.floor(ctx.sampleRate * 1.1)
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len)
+  const noise = ctx.createBufferSource()
+  noise.buffer = buf
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.Q.value = 1.1
+  bp.frequency.setValueAtTime(600, t0)
+  bp.frequency.exponentialRampToValueAtTime(4200, t0 + 0.35)
+  bp.frequency.exponentialRampToValueAtTime(900, t0 + 1.05)
+  const ng = ctx.createGain()
+  ng.gain.setValueAtTime(0.0001, t0)
+  ng.gain.exponentialRampToValueAtTime(0.42, t0 + 0.06)
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.05)
+  noise.connect(bp)
+  bp.connect(ng)
+  ng.connect(master)
+  noise.start(t0)
+  noise.stop(t0 + 1.15)
+
+  // the turbine underneath it
+  const osc = ctx.createOscillator()
+  osc.type = 'sawtooth'
+  osc.frequency.setValueAtTime(180, t0)
+  osc.frequency.exponentialRampToValueAtTime(760, t0 + 0.45)
+  osc.frequency.exponentialRampToValueAtTime(320, t0 + 1.0)
+  const lp = ctx.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = 2200
+  const og = ctx.createGain()
+  og.gain.setValueAtTime(0.0001, t0)
+  og.gain.exponentialRampToValueAtTime(0.3, t0 + 0.08)
+  og.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.0)
+  osc.connect(lp)
+  lp.connect(og)
+  og.connect(master)
+  osc.start(t0)
+  osc.stop(t0 + 1.1)
+}
+
 export function thud(gain = 0.3) {
   if (!running || !ctx || muted) return
   const osc = ctx.createOscillator()

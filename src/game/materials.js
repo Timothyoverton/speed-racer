@@ -93,6 +93,22 @@ export function trackMaterials() {
     }),
     poolTile: new THREE.MeshStandardMaterial({ color: '#cfe6f2', roughness: 0.7, metalness: 0.05 }),
     shark: new THREE.MeshStandardMaterial({ color: '#39434f', roughness: 0.75, metalness: 0.1 }),
+    fallWater: new THREE.MeshPhysicalMaterial({
+      color: '#bfe4f2',
+      transparent: true,
+      opacity: 0.5,
+      roughness: 0.25,
+      metalness: 0,
+      envMapIntensity: 0.6,
+      depthWrite: false,
+    }),
+    mist: new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      transparent: true,
+      opacity: 0.3,
+      depthWrite: false,
+      roughness: 1,
+    }),
     hazard: new THREE.MeshStandardMaterial({
       map: (() => {
         const t = hazardMap()

@@ -12,7 +12,7 @@ import { progress } from '../game/progress.js'
 import { activeGhost, ghostTimeAtPosition } from '../game/ghost.js'
 import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
-import { updateAudio, idleAudio, thud, initAudio, blip } from '../game/audio.js'
+import { updateAudio, idleAudio, thud, initAudio, boostWhoosh } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
 import { stopMusic } from '../game/music.js'
 import { sampleTrack } from '../game/trackQuery.js'
@@ -26,7 +26,7 @@ const MAX_SPEED = 62 // ~220 km/h ceiling; real top speed ~175 with drag
 // raising the ceiling alone just removes the taper, so the car creeps up to the
 // new limit instead of leaping at it.
 const BOOST_SECS = 5
-const BOOST_MULT = 1.2
+const BOOST_MULT = 1.3
 const BOOST_RADIUS = 5.5
 const LIN_DRAG = 0.05 // 1/s
 const QUAD_DRAG = 0.0003 // 1/m
@@ -208,7 +208,17 @@ export default function Car({ recorder }) {
         const dx = t.x - pad.pos[0]
         const dz = t.z - pad.pos[2]
         if (dx * dx + dz * dz < BOOST_RADIUS * BOOST_RADIUS) {
-          if (boostTimer.current < BOOST_SECS * 0.6) blip(920, 0.12)
+          if (boostTimer.current < BOOST_SECS * 0.6) {
+            boostWhoosh()
+            // an immediate shove as well as the raised ceiling: without it the
+            // pad just lifts a limit you then have to drive up to, and you only
+            // notice by watching the speedo
+            const kick = 7
+            b.applyImpulse(
+              { x: fwd.current.x * kick * b.mass(), y: 0, z: fwd.current.z * kick * b.mass() },
+              true,
+            )
+          }
           boostTimer.current = BOOST_SECS
           break
         }

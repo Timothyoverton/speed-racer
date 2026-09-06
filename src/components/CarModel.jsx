@@ -155,6 +155,7 @@ function useMaterials(ghost, color) {
         livery: g('#8ffbd8', 0.16),
         caliper: g('#8ffbd8', 0.16),
         helmet: g('#8ffbd8', 0.16),
+        exhaust: g('#8ffbd8', 0.16),
         visor: g('#8ffbd8', 0.16),
         ghost: true,
       }
@@ -226,6 +227,13 @@ function useMaterials(ghost, color) {
         metalness: 0.6,
         roughness: 0.15,
         envMapIntensity: 0.5,
+      }),
+      exhaust: new THREE.MeshStandardMaterial({
+        color: '#14161b',
+        emissive: '#ff4a12',
+        emissiveIntensity: 0,
+        metalness: 0.7,
+        roughness: 0.55,
       }),
       caliper: new THREE.MeshStandardMaterial({
         color: '#c8342c',
@@ -372,6 +380,13 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       1 - Math.exp(-5 * dt),
     )
     mat.tail.emissiveIntensity = 0.7 + (s.brake > 0.05 || s.handbrake ? 2.6 : 0)
+
+    // pipes glow while the NOS is lit
+    mat.exhaust.emissiveIntensity = THREE.MathUtils.lerp(
+      mat.exhaust.emissiveIntensity,
+      s.boost > 0 ? 2.4 : 0,
+      1 - Math.exp(-8 * dt),
+    )
 
     // spokes become a smear once the wheel is turning fast enough
     mat.blur.opacity = THREE.MathUtils.clamp((s.speed - 12) / 26, 0, 0.55)
@@ -563,18 +578,46 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
             <primitive object={mat.head} attach="material" />
           </mesh>
         ))}
-        <mesh position={[0, -0.08, -2.06]}>
-          <boxGeometry args={[0.98, 0.1, 0.06]} />
+        {/* One continuous light bar across the whole tail, Tesla style, with
+            the ends turned down the corners so it wraps rather than stopping
+            dead. Replaces a 0.98m stub that read as two dots at distance. */}
+        <mesh position={[0, -0.06, -2.04]}>
+          <boxGeometry args={[1.66, 0.075, 0.05]} />
           <primitive object={mat.tail} attach="material" />
         </mesh>
-
-        {/* exhausts */}
-        {[1, -1].map((s) => (
-          <mesh key={s} position={[s * 0.34, -0.34, -2.06]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 0.14, 10]} />
-            <primitive object={mat.rim} attach="material" />
+        {[1, -1].map((sd) => (
+          <mesh key={sd} position={[sd * 0.845, -0.06, -1.95]} rotation={[0, sd * 0.9, 0]}>
+            <boxGeometry args={[0.22, 0.075, 0.05]} />
+            <primitive object={mat.tail} attach="material" />
           </mesh>
         ))}
+        {/* a dark inset so the bar has something to sit in */}
+        <mesh position={[0, -0.06, -2.0]}>
+          <boxGeometry args={[1.72, 0.16, 0.05]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+
+        {/* Exhausts. Four proper pipes standing off the diffuser with dark
+            burnt tips, not the two 7cm stubs that were here — from a chase
+            camera they're dead centre of frame and they were invisible. */}
+        {[-0.46, -0.17, 0.17, 0.46].map((x) => (
+          <group key={x}>
+            <mesh position={[x, -0.26, -2.02]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.105, 0.115, 0.42, 12]} />
+              <primitive object={mat.rim} attach="material" />
+            </mesh>
+            {/* sooted tip, so the ends read as holes rather than chrome dots */}
+            <mesh position={[x, -0.26, -2.21]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.082, 0.082, 0.06, 12]} />
+              <primitive object={mat.exhaust} attach="material" />
+            </mesh>
+          </group>
+        ))}
+        {/* heat shield they sit against */}
+        <mesh position={[0, -0.26, -1.92]} castShadow>
+          <boxGeometry args={[1.22, 0.26, 0.12]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
       </group>
 
       {/* wheels sit outside the rolling chassis so they stay planted */}

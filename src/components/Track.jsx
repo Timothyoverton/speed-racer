@@ -102,6 +102,18 @@ export default function Track({ onFinish }) {
           )
         })}
 
+        {/* Stunt ramps — tilted slabs you drive up. */}
+        {TRACK.ramps.map((r, i) => (
+          <CuboidCollider
+            key={`ramp${i}`}
+            args={[r.size[0] / 2, r.size[1] / 2, r.size[2] / 2]}
+            position={r.pos}
+            rotation={[-r.pitch, r.yaw, 0]}
+            friction={0}
+            restitution={0}
+          />
+        ))}
+
         {/* Wall blocks. Solid and barely bouncy: hitting one should end your
             run, not flick you across the track. */}
         {TRACK.walls.map((w, i) => (
@@ -127,6 +139,10 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
       <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
+      <Boxes items={VISUALS.fallWater} material={mats.fallWater} />
+      <Boxes items={VISUALS.fallMist} material={mats.mist} />
+      <Boxes items={VISUALS.rampDeck} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.rampStripe} material={mats.hazard} castShadow />
       <Boxes items={VISUALS.poolWall} material={mats.poolTile} receiveShadow />
       <Boxes items={VISUALS.poolWater} material={mats.water} />
       <Sharks pools={TRACK.pools} />

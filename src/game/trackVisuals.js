@@ -54,6 +54,10 @@ function build(track) {
   const boostArrow = []
   const poolWater = []
   const poolWall = []
+  const rampDeck = []
+  const rampStripe = []
+  const fallWater = []
+  const fallMist = []
   const stripeLColor = []
   const stripeRColor = []
   const wallColor = []
@@ -211,9 +215,12 @@ function build(track) {
         const fz = Math.cos(b.yaw)
         const rx = Math.cos(b.yaw)
         const rz = -Math.sin(b.yaw)
+        // The two bars of each chevron must sweep BACK from a point ahead of
+        // you, or the arrow reads as pointing at the driver. First cut had the
+        // sign the other way round and every pad looked like a stop sign.
         boostArrow.push({
           p: [b.pos[0] + fx * z + rx * sd * 0.95, b.pos[1] + 0.05, b.pos[2] + fz * z + rz * sd * 0.95],
-          r: [0, b.yaw + sd * 0.62, 0],
+          r: [0, b.yaw - sd * 0.62, 0],
           s: [0.5, 0.05, 2.7],
         })
       }
@@ -235,9 +242,33 @@ function build(track) {
     poolWater.push({ p: [pl.pos[0], rim - 0.9, pl.pos[2]], r: [0, pl.yaw, 0], s: [pw, 0.3, plen] })
   }
 
+  for (const r of track.ramps) {
+    rampDeck.push({ p: r.pos, r: [-r.pitch, r.yaw, 0], s: r.size })
+    // hazard edge along the lip so you can see where it launches from
+    rampStripe.push({
+      p: [r.lip[0], r.lip[1] + 0.22, r.lip[2]],
+      r: [0, r.yaw, 0],
+      s: [r.size[0], 0.28, 0.4],
+    })
+  }
+
+  // Waterfalls: a curtain you fly through. No collider — it's weather, not a
+  // wall — plus a bank of mist where it lands.
+  for (const w of track.falls || []) {
+    fallWater.push({ p: [w.pos[0], w.pos[1] + 9, w.pos[2]], r: [0, w.yaw, 0], s: [w.width, 30, 0.7] })
+    for (let k = 0; k < 6; k++) {
+      fallMist.push({
+        p: [w.pos[0] + (k - 2.5) * (w.width / 7), w.pos[1] - 5.4 + (k % 2) * 1.2, w.pos[2]],
+        r: [0, w.yaw, 0],
+        s: [w.width / 4.5, 4.5, 3.4],
+      })
+    }
+  }
+
   return {
     road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
     wallBlock, wallStripe, boostPad, boostArrow, poolWater, poolWall,
+    rampDeck, rampStripe, fallWater, fallMist,
     stripeLColor, stripeRColor, wallColor, hazard, gateLeg, gateBeam, pylon, pylonCap,
   }
 }

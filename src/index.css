@@ -739,3 +739,33 @@ button.ctrlmode.active {
   .hud .timer { font-size: 30px; }
   .hud .speed b { font-size: 34px; }
 }
+
+
+/* BOOST readout — same shape as the airtime one, in NOS blue, and it pulses so
+   it's caught out of the corner of the eye rather than read. */
+.hud .boost {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 4.6rem;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.12s;
+  color: #7ffbff;
+  text-shadow: 0 0 18px rgba(37, 230, 255, 0.85);
+  animation: boostPulse 0.5s ease-in-out infinite alternate;
+}
+.hud .boost span {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.35em;
+  opacity: 0.9;
+}
+.hud .boost b {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes boostPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.5); }
+}
