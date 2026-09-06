@@ -294,6 +294,59 @@ export function waterfallMap() {
   return t
 }
 
+// Rock and dirt for the mountain. Untextured flat-shaded boxes read as
+// architecture, not landscape — what sells stone is strata, crevices and
+// grit, plus an earthy tone rather than a cool grey.
+export function rockMap() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const g = c.getContext('2d')
+  g.fillStyle = '#8a7a66'
+  g.fillRect(0, 0, 256, 256)
+
+  // horizontal strata — the single strongest "this is rock" cue
+  let y = 0
+  while (y < 256) {
+    const h = 6 + Math.random() * 26
+    const v = 0.78 + Math.random() * 0.42
+    g.fillStyle = `rgb(${Math.round(138 * v)},${Math.round(122 * v)},${Math.round(102 * v)})`
+    g.fillRect(0, y, 256, h)
+    // ragged bottom edge to the band
+    for (let x = 0; x < 256; x += 8) {
+      g.fillRect(x, y + h - 2, 8, Math.random() * 5)
+    }
+    y += h
+  }
+
+  // crevices
+  g.strokeStyle = 'rgba(48,40,32,0.55)'
+  for (let i = 0; i < 26; i++) {
+    g.lineWidth = 0.6 + Math.random() * 2
+    g.beginPath()
+    let x = Math.random() * 256
+    let yy = Math.random() * 256
+    g.moveTo(x, yy)
+    for (let k = 0; k < 5; k++) {
+      x += (Math.random() - 0.5) * 46
+      yy += 6 + Math.random() * 22
+      g.lineTo(x, yy)
+    }
+    g.stroke()
+  }
+
+  // grit and dirt patches
+  for (let i = 0; i < 2600; i++) {
+    const v = Math.random()
+    g.fillStyle =
+      v > 0.6 ? 'rgba(60,50,40,0.5)' : v > 0.3 ? 'rgba(196,180,156,0.35)' : 'rgba(104,86,64,0.4)'
+    g.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 3, 1 + Math.random() * 3)
+  }
+
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 export function checkerMap() {
   return make('checker', () => {
     const N = 128

@@ -291,9 +291,10 @@ function build(track) {
   // Waterfalls: a curtain you fly through. No collider — it's weather, not a
   // wall — plus a bank of mist where it lands, and a mountain for the water to
   // actually come out of. Falling from nothing was the weak part.
-  // Lighter than you'd think: these are big surfaces mostly facing away from a
-  // low sun, so mid-greys render close to black.
-  const ROCK = ['#9aa0a8', '#868d96', '#a8aeb6', '#79808a', '#b2b8bf']
+  // Earthy, not blue-grey — the cool greys read as a painted box. Lighter than
+  // feels right on paper too: these are big faces mostly turned away from a low
+  // sun, so mid tones render close to black.
+  const ROCK = ['#b9a78c', '#a2907a', '#c7b79e', '#8d7c68', '#d0c2ab', '#9b8a72']
   for (const w of track.falls || []) {
     const rx = Math.cos(w.yaw)
     const rz = -Math.sin(w.yaw)
@@ -332,12 +333,31 @@ function build(track) {
       // sl.h is now metres ABOVE THE ROAD; the block runs down to the grass
       const peak = w.pos[1] + sl.h
       const h = peak - groundY
+      // Tilt each block a little off vertical. Perfectly upright boxes on a
+      // shared axis is what made this read as a building; a few degrees of
+      // lean turns the same boxes into broken rock.
       cliff.push({
         p: [cx2, groundY + h / 2, cz2],
-        r: [0, w.yaw + (i - 2) * 0.16, 0],
+        r: [(i % 2 ? 1 : -1) * 0.05, w.yaw + (i - 2) * 0.16, (i % 3 ? 1 : -1) * 0.07],
         s: [sl.w, h, sl.d],
       })
       cliffColor.push(ROCK[i % ROCK.length])
+
+      // scree: smaller chunks piled around the foot, so the mountain meets the
+      // grass in rubble instead of a clean edge
+      for (let k = 0; k < 3; k++) {
+        const sw = 4 + ((i * 7 + k * 5) % 9)
+        cliff.push({
+          p: [
+            cx2 + rx * (sl.w * 0.45 + k * 3) + fx * (k - 1) * 9,
+            groundY + sw * 0.35,
+            cz2 + rz * (sl.w * 0.45 + k * 3) + fz * (k - 1) * 9,
+          ],
+          r: [0.16 * (k - 1), w.yaw + k * 0.9, 0.12 * (k % 2 ? 1 : -1)],
+          s: [sw, sw * 0.8, sw],
+        })
+        cliffColor.push(ROCK[(i + k + 2) % ROCK.length])
+      }
     })
     // The ledge the water pours off. It has to overhang the road a little
     // without sitting ON it — the first cut was 32m wide centred 16m out, which
