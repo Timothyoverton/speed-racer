@@ -49,9 +49,9 @@ export default function Boxes({ items, material, colors, castShadow = false, rec
 }
 
 // Same, for an arbitrary shared geometry (trees, floodlights, crowd blocks).
-export function Shapes({ items, geometry, material, castShadow = false, receiveShadow = false }) {
+export function Shapes({ items, geometry, material, colors, castShadow = false, receiveShadow = false }) {
   const ref = useRef(null)
-  useInstanceMatrices(ref, items)
+  useInstanceMatrices(ref, items, colors)
 
   if (!items.length) return null
 

@@ -97,6 +97,13 @@ Same **React + Vite** base as the other games, plus a 3D stack:
 Everything is generated at runtime — there are no textures, models or HDRs to
 download, so the whole game is JS.
 
+- **Sky** (`SkyDome.jsx`): a hand-rolled gradient dome plus a sun disc, riding
+  with the camera so it behaves like sky rather than a very large ball you can
+  drive toward. It replaced drei's `<Sky>`, whose physical model is HDR and so
+  bright that against ACES at exposure ~1 it flattened to near-white at every
+  turbidity/rayleigh pairing worth having. Less clever, completely predictable,
+  and the horizon colour can be matched to the fog exactly so distant hills fade
+  into the sky instead of into a slightly different blue.
 - **Lighting**: ACES filmic tone mapping, a low warm sun with soft (PCF) 2k
   shadows, and a small **environment map built in-engine** from a sky sphere and
   a few `<Lightformer>` panels. That env map is what the car's clear-coated
@@ -118,6 +125,13 @@ download, so the whole game is JS.
   wing, and lathed tyres on chromed rims. It's animated from telemetry —
   wheels steer and spin, the chassis rolls and dives on its springs, and the
   brake discs and tail light glow under braking.
+- **Scenery variation**: instanced meshes take a per-instance colour, which is
+  what stops 260 identical cones reading as a wall of cardboard — trees are two
+  stacked cones in seven greens, hills come in a near ring and a hazier far ring
+  so the skyline has depth, and clouds are clumps of squashed blobs rather than
+  single wide boxes (from underneath, a box cloud looks exactly like a box).
+  Scrub on the verges is placed by asking `sampleTrack` where the road actually
+  is — scattering by radius alone puts bushes down the middle of the racing line.
 - **Effects** (`Effects.jsx`): tyre smoke (a 200-particle `Points` pool with a
   custom shader) and skid marks (a 420-quad instanced ring buffer) spawn from
   the rear contact patches whenever the car is sliding.

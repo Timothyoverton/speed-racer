@@ -1,10 +1,11 @@
 import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
-import { Sky, Environment, Lightformer } from '@react-three/drei'
+import { Environment, Lightformer } from '@react-three/drei'
 import * as THREE from 'three'
 import Race from './Race.jsx'
 import Scenery from './Scenery.jsx'
+import SkyDome from './SkyDome.jsx'
 import { useRunId } from '../game/store.js'
 import { BOUNDS } from '../game/trackVisuals.js'
 import { carState } from '../game/carState.js'
@@ -54,22 +55,20 @@ export default function Scene() {
         toneMappingExposure: 1.04,
       }}
     >
-      <color attach="background" args={['#8fb2d8']} />
-      {/* haze starts further out and is tinted to match the sky at the horizon,
-          so distance reads as depth rather than as everything fading to white */}
-      <fog attach="fog" args={['#a8c2dd', 420, 1750]} />
+      <color attach="background" args={['#cddff0']} />
+      {/* Haze tinted to the sky at the horizon, so distance reads as depth
+          rather than everything fading to white. Starts further out than it
+          used to: with the hills sitting 600-1400m away, an early fog was
+          bleaching the whole skyline into the sky and flattening the picture. */}
+      {/* matched to SkyDome's horizon colour, so a distant hill fades into the
+          sky behind it instead of into a slightly different blue */}
+      <fog attach="fog" args={['#c6dced', 620, 2200]} />
 
-      <Sky
-        distance={4000}
-        sunPosition={sunPos}
-        turbidity={3.2}
-        rayleigh={2.6}
-        mieCoefficient={0.006}
-        mieDirectionalG={0.85}
-      />
+      {/* Less turbidity, more rayleigh: turbidity is haze (whiter), rayleigh is
+          the blue scattering. The old pairing washed out to near-white overhead
+          and took all the depth with it. */}
+      <SkyDome sunDir={SUN} />
 
-      {/* Image-based lighting, built in-engine — gives the car paint, glass and
-          chrome something to reflect without shipping an HDR file. */}
       <Environment resolution={128} frames={1} background={false}>
         <mesh scale={120}>
           <sphereGeometry args={[1, 24, 24]} />
