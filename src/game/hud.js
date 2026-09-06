@@ -14,6 +14,7 @@ export const hud = {
   handbrake: false,
   airTime: 0, // seconds off the ground, for the flight readout
   topSpeedKmh: 0, // running max for the lap, banked with the record
+  boost: 0, // seconds of boost left, drives the HUD flash
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__hud = hud
@@ -31,4 +32,5 @@ export function resetHud(totalCheckpoints) {
   hud.handbrake = false
   hud.airTime = 0
   hud.topSpeedKmh = 0
+  hud.boost = 0
 }

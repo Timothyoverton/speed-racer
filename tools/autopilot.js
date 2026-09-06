@@ -43,7 +43,28 @@ export const AP = {
       const k = Math.abs(dy) / Math.max(b.d - a.d, 0.01)
       vmax[i] = k < 2e-4 ? 999 : Math.sqrt(20.8 / k)
     }
-    Object.assign(this, { P, vmax, N, cursor: 0 })
+    // wall blocks, in road-local terms, so control() can pick the open side
+    const half = T.roadWidth / 2
+    const walls = (T.walls || []).map((w) => {
+      const dx = w.pos[0] - 0
+      const dz = w.pos[2] - 0
+      void dx
+      void dz
+      return { pos: w.pos, yaw: w.yaw, w: w.size[0], lat: 0 }
+    })
+    // recover each block's lateral offset from its world position vs the tile
+    // nearest it along the course
+    for (const w of walls) {
+      let best = 0
+      let bd = Infinity
+      for (let k = 0; k < N; k++) {
+        const d = (P[k].x - w.pos[0]) ** 2 + (P[k].z - w.pos[2]) ** 2
+        if (d < bd) { bd = d; best = k }
+      }
+      const t0 = P[best]
+      w.lat = (w.pos[0] - t0.x) * Math.cos(t0.yaw) - (w.pos[2] - t0.z) * Math.sin(t0.yaw)
+    }
+    Object.assign(this, { P, vmax, N, cursor: 0, walls, roadHalf: half })
     return { track: T.id, tiles: N, lenM: Math.round(T.length) }
   },
 
@@ -68,7 +89,32 @@ export const AP = {
     let j = i
     const look = cfg.look0 + cfg.lookV * v
     while (j < N - 1 && P[j].d - P[i].d < look) j++
-    let err = Math.atan2(P[j].x - px, P[j].z - pz) - Math.atan2(car.fwd[0], car.fwd[2])
+
+    // Aim point, shifted sideways to dodge any wall block we're closing on.
+    // Mission Impossible's blocks overlap the centreline, so a centreline
+    // autopilot drives straight into them; without this it can't complete a
+    // lap and there's no reference time to set medals from.
+    let tx = P[j].x
+    let tz = P[j].z
+    if (this.walls && this.walls.length) {
+      const half = this.roadHalf
+      for (const w of this.walls) {
+        const ahead = (w.pos[0] - px) * Math.sin(w.yaw) + (w.pos[2] - pz) * Math.cos(w.yaw)
+        if (ahead < 0 || ahead > 75) continue
+        const lo = w.lat - w.w / 2
+        const hi = w.lat + w.w / 2
+        // middle of whichever side is open, measured from the CENTRELINE
+        const target = lo > -half ? (-half + lo) / 2 : (hi + half) / 2
+        // Shift the normal lookahead point sideways. Aiming at a spot beyond
+        // the wall instead (the first attempt) turns a 7m offset into a
+        // fraction of a degree of heading error at 60m out, so the car doesn't
+        // begin moving until it's already too late to miss anything.
+        tx = P[j].x + Math.cos(P[j].yaw) * target
+        tz = P[j].z - Math.sin(P[j].yaw) * target
+        break
+      }
+    }
+    let err = Math.atan2(tx - px, tz - pz) - Math.atan2(car.fwd[0], car.fwd[2])
     while (err > Math.PI) err -= 2 * Math.PI
     while (err < -Math.PI) err += 2 * Math.PI
     inp.left = err * cfg.steerSign < -cfg.dead

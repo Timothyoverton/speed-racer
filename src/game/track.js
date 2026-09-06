@@ -31,6 +31,9 @@ class Turtle {
     this.dist = 0
     this.tiles = []
     this.checkpoints = []
+    this.walls = []
+    this.boosts = []
+    this.pools = []
     this.start = null
     this.finish = null
   }
@@ -142,6 +145,44 @@ class Turtle {
     return this
   }
 
+  // A solid block sitting ON the road, covering part of its width. You don't
+  // jump these — you pick a side and thread them. Set a few alternating and a
+  // straight becomes a slalom you have to take at whatever speed you dare.
+  // `lateral` is the block's centre offset from the centreline, + to the left.
+  wall(lateral = 0, width = 8, height = 2.4, thickness = 1.4) {
+    const rx = Math.cos(this.heading)
+    const rz = -Math.sin(this.heading)
+    this.walls.push({
+      pos: [this.x + rx * lateral, this.y, this.z + rz * lateral],
+      yaw: this.heading,
+      size: [width, height, thickness],
+    })
+    return this
+  }
+
+  // A swimming pool: a gap with something to look at in the bottom of it. The
+  // road stops exactly as it does over a void, so the physics is identical —
+  // you clear it or you don't — but you can see what you're clearing, which is
+  // most of the nerve.
+  pool(dist, drop = 0) {
+    const x0 = this.x
+    const z0 = this.z
+    const y0 = this.y
+    this.gap(dist, drop)
+    this.pools.push({
+      pos: [(x0 + this.x) / 2, Math.min(y0, this.y), (z0 + this.z) / 2],
+      yaw: this.heading,
+      size: [this.w + 10, dist],
+    })
+    return this
+  }
+
+  // A boost pad. Drive over the arrows, get a burst.
+  boost() {
+    this.boosts.push({ pos: [this.x, this.y, this.z], yaw: this.heading })
+    return this
+  }
+
   markStart() {
     this.start = { pos: [this.x, this.y, this.z], yaw: this.heading }
     return this
@@ -164,7 +205,7 @@ class Turtle {
 
 function buildTrack({ id, name, roadWidth, medals, course }) {
   const t = new Turtle(roadWidth)
-  for (const [cmd, a, b] of course) {
+  for (const [cmd, a, b, c] of course) {
     if (cmd === 'start') t.markStart()
     else if (cmd === 'finish') t.markFinish()
     else if (cmd === 'checkpoint') t.checkpoint()
@@ -172,6 +213,9 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     else if (cmd === 'ramp') t.ramp(a, b)
     else if (cmd === 'jump') t.jump(a, b)
     else if (cmd === 'gap') t.gap(a, b)
+    else if (cmd === 'wall') t.wall(a, b, c)
+    else if (cmd === 'boost') t.boost()
+    else if (cmd === 'pool') t.pool(a, b)
     else if (cmd === 'turn') t.turn(a, b)
   }
   return {
@@ -184,6 +228,9 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     // one long box, so straights have no seams for the car to catch on.
     slabs: padSlabs(mergeTiles(t.tiles)),
     checkpoints: t.checkpoints,
+    walls: t.walls,
+    boosts: t.boosts,
+    pools: t.pools,
     start: t.start,
     finish: t.finish,
     length: t.dist,
@@ -561,7 +608,111 @@ const STUNT_PARK = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL, STUNT_PARK]
+// --- Track 5: Mission Impossible ---------------------------------------------
+// Stunt Park with the safety taken off, for the kids. Everything that track
+// does, bigger, and three things it doesn't: solid blocks you thread rather
+// than jump, boost pads that make the big gaps reachable, and a shark pool.
+//
+// The road is 14m wide, not 20. That single number does more for the
+// difficulty than any jump on here — every wall gap, every landing and every
+// corner gets proportionally meaner, and there's no room to be lazy.
+//
+// The boost pads are load-bearing, not decoration: the last two gaps are sized
+// so you need the pad before them. Miss the pad and you will not make it.
+const MISSION_IMPOSSIBLE = buildTrack({
+  id: 'mission-impossible-5',
+  name: 'Mission Impossible',
+  roadWidth: 14,
+  medals: medalsFor(63.05), // reference lap, measured
+  course: [
+    ['start'],
+    ['straight', 120],
+    ['boost'],
+    ['straight', 40],
+    ['jump', 26, 4.6], // opener, straight into it
+    ['gap', 38, 9],
+    ['ramp', 40, -6],
+    ['straight', 50],
+    ['checkpoint'],
+
+    // THE SLALOM — solid blocks, alternating sides, taken at whatever you dare.
+    // Each block overlaps the centreline on purpose: the first cut left a clear
+    // channel straight up the middle, so you could ignore the whole section.
+    // 60m between blocks, not 34: blocking the centreline on a 14m road leaves
+    // a 6.5m channel, so consecutive blocks demand a ~7m lateral shift. At
+    // 150km/h that needs ~22 m/s^2 over 34m — past what the car has — and the
+    // section could only be taken at a crawl. 60m brings it to ~7 m/s^2.
+    ['straight', 40],
+    ['wall', 3.5, 8, 2.4],
+    ['straight', 60],
+    ['wall', -3.5, 8, 2.4],
+    ['straight', 60],
+    ['wall', 3.5, 8, 2.4],
+    ['straight', 60],
+    ['wall', -3.5, 8, 2.4],
+    ['straight', 70],
+    ['turn', 40, 120],
+    ['straight', 50],
+
+    // THE POOL — clear it or swim. Wide enough to need the run-up.
+    ['ramp', 34, 4],
+    ['jump', 22, 4.4],
+    ['pool', 44, 10],
+    ['ramp', 46, -7],
+    ['straight', 70],
+    ['checkpoint'],
+
+    // THE GAUNTLET — a wall right where you land, so the landing has to be
+    // aimed rather than survived
+    ['jump', 18, 2.6],
+    ['gap', 20, 5],
+    // 55m, not 26: you land from the gap still settling, and a block that
+    // close is a coin flip rather than a test — the car gets deflected off the
+    // corner of it and thrown clean off the track.
+    ['straight', 55],
+    ['wall', -3.4, 7.6, 2.6],
+    ['straight', 55],
+    ['turn', -50, 105],
+    ['straight', 40],
+    ['boost'],
+    ['straight', 30],
+
+    // THE BIG ONE — 60m of nothing, and it only goes if you took the pad
+    // Flat run-up. A 7m climb into this kicker left the car arriving too slow
+    // to clear its own gap — the exact rule this project already learned on
+    // Freefall's Leap of Faith, and I broke it again here.
+    ['straight', 44],
+    ['jump', 32, 7.4], // ~25deg
+    ['gap', 62, 20], // ~120km/h with the pad; 78m needed 138 and was a lottery
+    ['ramp', 80, -14],
+    ['straight', 90],
+    ['checkpoint'],
+
+    // These two blocks used to sit right on the exit of the corner above, and
+    // the car arrived still rotating with nowhere to put itself. Pushed well
+    // down the straight so the corner and the slalom are separate problems.
+    ['turn', 45, 115],
+    ['straight', 110],
+    ['wall', 3.3, 7.4, 2.4],
+    ['straight', 65],
+    ['wall', -3.3, 7.4, 2.4],
+    ['straight', 80],
+    ['boost'],
+    ['straight', 46],
+
+    // THE LAST WORD — the biggest drop on any track, off the steepest kicker
+    ['straight', 40],
+    ['jump', 30, 7.0],
+    ['gap', 72, 26], // still the hardest jump in the game, ~125km/h minimum
+    ['ramp', 90, -16],
+    ['straight', 120],
+    ['turn', -38, 130],
+    ['straight', 130],
+    ['finish'],
+  ],
+})
+
+export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL, STUNT_PARK, MISSION_IMPOSSIBLE]
 
 const TRACK_KEY = 'speed-racer:track'
 

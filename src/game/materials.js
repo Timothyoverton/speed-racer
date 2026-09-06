@@ -69,6 +69,30 @@ export function trackMaterials() {
       roughness: 0.4,
     }),
     post: new THREE.MeshStandardMaterial({ color: '#7e8794', roughness: 0.6, metalness: 0.5 }),
+    boostPad: new THREE.MeshStandardMaterial({
+      color: '#0b1a24',
+      roughness: 0.5,
+      metalness: 0.2,
+      emissive: '#0a2b3a',
+      emissiveIntensity: 0.8,
+    }),
+    boostArrow: new THREE.MeshStandardMaterial({
+      color: '#7ffbff',
+      emissive: '#25e6ff',
+      emissiveIntensity: 2.6,
+      roughness: 0.3,
+    }),
+    water: new THREE.MeshPhysicalMaterial({
+      color: '#0f6f9c',
+      transparent: true,
+      opacity: 0.88,
+      // low roughness would mirror the sky and hide the sharks; keep it readable
+      roughness: 0.35,
+      metalness: 0.1,
+      envMapIntensity: 0.5,
+    }),
+    poolTile: new THREE.MeshStandardMaterial({ color: '#cfe6f2', roughness: 0.7, metalness: 0.05 }),
+    shark: new THREE.MeshStandardMaterial({ color: '#39434f', roughness: 0.75, metalness: 0.1 }),
     hazard: new THREE.MeshStandardMaterial({
       map: (() => {
         const t = hazardMap()

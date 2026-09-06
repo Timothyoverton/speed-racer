@@ -25,6 +25,7 @@ export const carState = {
   landing: 0, // 0..1, decays after a hard touchdown — squashes the springs
   lateral: 0, // metres from the road centreline, + towards the car's left
   onKerb: false,
+  boost: 0, // seconds of NOS remaining
 
   // drivetrain (for HUD + audio; does not feed the physics directly)
   gear: 1,

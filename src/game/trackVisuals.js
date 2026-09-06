@@ -48,6 +48,12 @@ function build(track) {
   const gateBeam = []
   const pylon = []
   const pylonCap = []
+  const wallBlock = []
+  const wallStripe = []
+  const boostPad = []
+  const boostArrow = []
+  const poolWater = []
+  const poolWall = []
   const stripeLColor = []
   const stripeRColor = []
   const wallColor = []
@@ -183,8 +189,55 @@ function build(track) {
     }
   })
 
+  // --- obstacles and pads -----------------------------------------------------
+  for (const w of track.walls) {
+    const [ww, wh, wt] = w.size
+    wallBlock.push({ p: [w.pos[0], w.pos[1] + wh / 2, w.pos[2]], r: [0, w.yaw, 0], s: [ww, wh, wt] })
+    // a hazard band along the top so it reads as a thing to avoid, not scenery
+    wallStripe.push({
+      p: [w.pos[0], w.pos[1] + wh + 0.05, w.pos[2]],
+      r: [0, w.yaw, 0],
+      s: [ww + 0.1, 0.22, wt + 0.1],
+    })
+  }
+
+  for (const b of track.boosts) {
+    boostPad.push({ p: [b.pos[0], b.pos[1] + 0.02, b.pos[2]], r: [0, b.yaw, 0], s: [6.4, 0.04, 9] })
+    // three chevrons pointing the way you're already going
+    for (let k = 0; k < 3; k++) {
+      const z = -2.6 + k * 2.6
+      for (const sd of [1, -1]) {
+        const fx = Math.sin(b.yaw)
+        const fz = Math.cos(b.yaw)
+        const rx = Math.cos(b.yaw)
+        const rz = -Math.sin(b.yaw)
+        boostArrow.push({
+          p: [b.pos[0] + fx * z + rx * sd * 0.95, b.pos[1] + 0.05, b.pos[2] + fz * z + rz * sd * 0.95],
+          r: [0, b.yaw + sd * 0.62, 0],
+          s: [0.5, 0.05, 2.7],
+        })
+      }
+    }
+  }
+
+  for (const pl of track.pools) {
+    const [pw, plen] = pl.size
+    // The road here is up on pylons, so a pool hung a few metres under it just
+    // floats in the air. Build the tank all the way down to the grass and put
+    // the water near the top, where you can see what you're jumping over.
+    const rim = pl.pos[1] - 1.5
+    const tankH = Math.max(rim - groundY, 4)
+    poolWall.push({
+      p: [pl.pos[0], rim - tankH / 2, pl.pos[2]],
+      r: [0, pl.yaw, 0],
+      s: [pw + 2.4, tankH, plen + 2.4],
+    })
+    poolWater.push({ p: [pl.pos[0], rim - 0.9, pl.pos[2]], r: [0, pl.yaw, 0], s: [pw, 0.3, plen] })
+  }
+
   return {
     road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
+    wallBlock, wallStripe, boostPad, boostArrow, poolWater, poolWall,
     stripeLColor, stripeRColor, wallColor, hazard, gateLeg, gateBeam, pylon, pylonCap,
   }
 }

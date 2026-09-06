@@ -12,7 +12,7 @@ import { progress } from '../game/progress.js'
 import { activeGhost, ghostTimeAtPosition } from '../game/ghost.js'
 import { GROUND_Y } from '../game/trackVisuals.js'
 import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
-import { updateAudio, idleAudio, thud, initAudio } from '../game/audio.js'
+import { updateAudio, idleAudio, thud, initAudio, blip } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
 import { stopMusic } from '../game/music.js'
 import { sampleTrack } from '../game/trackQuery.js'
@@ -22,6 +22,12 @@ const ACCEL = 16 // m/s^2 at full throttle (tapers to 0 near MAX_SPEED)
 const REVERSE_ACCEL = 8
 const BRAKE_ACCEL = 26
 const MAX_SPEED = 62 // ~220 km/h ceiling; real top speed ~175 with drag
+// Boost pads. 20% more speed for 5s, applied to BOTH the ceiling and the shove:
+// raising the ceiling alone just removes the taper, so the car creeps up to the
+// new limit instead of leaping at it.
+const BOOST_SECS = 5
+const BOOST_MULT = 1.2
+const BOOST_RADIUS = 5.5
 const LIN_DRAG = 0.05 // 1/s
 const QUAD_DRAG = 0.0003 // 1/m
 const GRIP = 12 // lateral bite, 1/s — how tightly velocity tracks heading
@@ -90,6 +96,7 @@ export default function Car({ recorder }) {
   const camLook = useRef(new THREE.Vector3())
   const carPos = useRef(new THREE.Vector3())
   const stuckTimer = useRef(0)
+  const boostTimer = useRef(0)
   const ghostThrottle = useRef(0)
   const camInit = useRef(false)
   const airTimer = useRef(0)
@@ -112,6 +119,7 @@ export default function Car({ recorder }) {
     b.setAngvel({ x: 0, y: 0, z: 0 }, true)
     stuckTimer.current = 0
     airTimer.current = 0
+    boostTimer.current = 0
     camInit.current = false
     hbPrev.current = false
     resetCarState()
@@ -191,6 +199,24 @@ export default function Car({ recorder }) {
     carState.lateral = onRoad ? onRoad.lateral : 0
     carState.onKerb = !!(onRoad && onRoad.onKerb && grounded)
 
+    // ---- boost pads ----
+    // A handful of pads per track, so measuring to each one is cheaper than any
+    // spatial index would be.
+    if (boostTimer.current > 0) boostTimer.current = Math.max(0, boostTimer.current - dt)
+    if (racing && grounded) {
+      for (const pad of TRACK.boosts) {
+        const dx = t.x - pad.pos[0]
+        const dz = t.z - pad.pos[2]
+        if (dx * dx + dz * dz < BOOST_RADIUS * BOOST_RADIUS) {
+          if (boostTimer.current < BOOST_SECS * 0.6) blip(920, 0.12)
+          boostTimer.current = BOOST_SECS
+          break
+        }
+      }
+    }
+    const boosting = boostTimer.current > 0
+    carState.boost = boostTimer.current
+
     const lv = b.linvel()
     vel.current.set(lv.x, lv.y, lv.z)
     const vForward = vel.current.dot(fwd.current)
@@ -222,14 +248,15 @@ export default function Car({ recorder }) {
     if (racing && grounded) {
       const throttle = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
       if (throttle > 0) {
-        const taper = THREE.MathUtils.clamp(1 - vForward / MAX_SPEED, 0, 1)
+        const ceiling = MAX_SPEED * (boosting ? BOOST_MULT : 1)
+        const taper = THREE.MathUtils.clamp(1 - vForward / ceiling, 0, 1)
         // lateralG is last frame's, which is close enough and avoids reordering
         const latG = Math.abs(carState.lateralG)
         const gripLeft = THREE.MathUtils.clamp(1 - (latG / LAT_G_LIMIT) ** 2, 0, 1)
         const corner = MIN_CORNER_THROTTLE + (1 - MIN_CORNER_THROTTLE) * gripLeft
         impulse.current.addScaledVector(
           fwd.current,
-          ACCEL * torqueFactor(rpm01) * taper * corner * dt,
+          ACCEL * (boosting ? BOOST_MULT : 1) * torqueFactor(rpm01) * taper * corner * dt,
         )
       } else if (throttle < 0) {
         if (vForward > 1) impulse.current.addScaledVector(fwd.current, -BRAKE_ACCEL * dt)
@@ -390,6 +417,7 @@ export default function Car({ recorder }) {
     hud.timeMs = elapsedMs()
     hud.checkpoints = progress.next
     hud.airborne = !grounded
+    hud.boost = boostTimer.current
     hud.gear = carState.gear
     hud.rpm01 = carState.rpm01
     hud.drift = carState.slip

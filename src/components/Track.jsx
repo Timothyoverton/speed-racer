@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
 import Boxes from './Boxes.jsx'
@@ -15,6 +16,47 @@ const RAIL_H = 0.6 // collider half-height; must stay in step with the visuals
 // metre past the chord swings its ends inward across the road — that was an
 // invisible wall up to 43cm inside the visible barrier on the entry line.
 const RAIL_OVERLAP = 0.2
+
+// Sharks. Two fins per pool, circling slowly — the whole point of a pool you
+// have to clear is what's in it.
+function Sharks({ pools }) {
+  const ref = useRef(null)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const fins = useMemo(() => {
+    const out = []
+    pools.forEach((pl, i) => {
+      const [pw, plen] = pl.size
+      const r = Math.min(pw, plen) * 0.28
+      for (let k = 0; k < 2; k++) {
+        out.push({ cx: pl.pos[0], cz: pl.pos[2], y: pl.pos[1] - 2.1, r, phase: k * Math.PI + i, spin: 0.5 + i * 0.13 })
+      }
+    })
+    return out
+  }, [pools])
+
+  useFrame(({ clock }) => {
+    const mesh = ref.current
+    if (!mesh) return
+    const t = clock.getElapsedTime()
+    fins.forEach((f, i) => {
+      const a = f.phase + t * f.spin
+      dummy.position.set(f.cx + Math.cos(a) * f.r, f.y, f.cz + Math.sin(a) * f.r)
+      dummy.rotation.set(0, -a, 0)
+      dummy.scale.set(0.5, 0.9, 1.5)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+  })
+
+  if (!fins.length) return null
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, fins.length]} frustumCulled={false} castShadow>
+      <coneGeometry args={[0.5, 1, 4]} />
+      <primitive object={trackMaterials().shark} attach="material" />
+    </instancedMesh>
+  )
+}
 
 export default function Track({ onFinish }) {
   const finished = useRef(false)
@@ -59,6 +101,19 @@ export default function Track({ onFinish }) {
             </group>
           )
         })}
+
+        {/* Wall blocks. Solid and barely bouncy: hitting one should end your
+            run, not flick you across the track. */}
+        {TRACK.walls.map((w, i) => (
+          <CuboidCollider
+            key={`wall${i}`}
+            args={[w.size[0] / 2, w.size[1] / 2, w.size[2] / 2]}
+            position={[w.pos[0], w.pos[1] + w.size[1] / 2, w.pos[2]]}
+            rotation={[0, w.yaw, 0]}
+            friction={0}
+            restitution={0.05}
+          />
+        ))}
       </RigidBody>
 
       {/* --- visuals: a handful of instanced meshes for the whole circuit --- */}
@@ -72,6 +127,13 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
       <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
+      <Boxes items={VISUALS.poolWall} material={mats.poolTile} receiveShadow />
+      <Boxes items={VISUALS.poolWater} material={mats.water} />
+      <Sharks pools={TRACK.pools} />
+      <Boxes items={VISUALS.boostPad} material={mats.boostPad} />
+      <Boxes items={VISUALS.boostArrow} material={mats.boostArrow} />
+      <Boxes items={VISUALS.wallBlock} material={mats.concrete} castShadow receiveShadow />
+      <Boxes items={VISUALS.wallStripe} material={mats.hazard} castShadow />
       <Boxes items={VISUALS.pylon} material={mats.concrete} castShadow receiveShadow />
       <Boxes items={VISUALS.pylonCap} material={mats.concrete} castShadow />
       <Boxes items={VISUALS.hazard} material={mats.hazard} castShadow receiveShadow />

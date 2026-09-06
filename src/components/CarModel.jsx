@@ -154,6 +154,8 @@ function useMaterials(ghost, color) {
         blur: g('#8ffbd8', 0),
         livery: g('#8ffbd8', 0.16),
         caliper: g('#8ffbd8', 0.16),
+        helmet: g('#8ffbd8', 0.16),
+        visor: g('#8ffbd8', 0.16),
         ghost: true,
       }
     }
@@ -209,6 +211,21 @@ function useMaterials(ghost, color) {
         clearcoat: 1,
         clearcoatRoughness: 0.06,
         envMapIntensity: 1.3,
+      }),
+      // A driver in the cockpit. Nothing sells scale on a jump like a helmet.
+      helmet: new THREE.MeshPhysicalMaterial({
+        color: '#e8412f',
+        metalness: 0.1,
+        roughness: 0.35,
+        clearcoat: 0.7,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 0.5,
+      }),
+      visor: new THREE.MeshPhysicalMaterial({
+        color: '#0b1220',
+        metalness: 0.6,
+        roughness: 0.15,
+        envMapIntensity: 0.5,
       }),
       caliper: new THREE.MeshStandardMaterial({
         color: '#c8342c',
@@ -421,6 +438,68 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
           <boxGeometry args={[0.3, 0.12, 0.5]} />
           <primitive object={mat.carbon} attach="material" />
         </mesh>
+
+        {/* Driver. A helmet in the cockpit is the cheapest thing on this car
+            and does the most: it gives every other part a human scale, which
+            is what makes a 40m jump read as 40m. */}
+        <mesh position={[0, 0.12, -0.16]} castShadow>
+          <sphereGeometry args={[0.17, 16, 14]} />
+          <primitive object={mat.helmet} attach="material" />
+        </mesh>
+        <mesh position={[0, 0.11, 0.0]} rotation={[-0.15, 0, 0]}>
+          <boxGeometry args={[0.235, 0.09, 0.05]} />
+          <primitive object={mat.visor} attach="material" />
+        </mesh>
+        {/* roll hoop behind the head */}
+        <mesh position={[0, 0.16, -0.42]} rotation={[0.12, 0, 0]} castShadow>
+          <boxGeometry args={[0.3, 0.26, 0.1]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+
+        {/* wing mirrors, out on stalks */}
+        {[1, -1].map((sd) => (
+          <group key={sd}>
+            <mesh position={[sd * 0.4, 0.04, 0.34]} rotation={[0, 0, sd * 0.3]}>
+              <boxGeometry args={[0.3, 0.02, 0.03]} />
+              <primitive object={mat.carbon} attach="material" />
+            </mesh>
+            <mesh position={[sd * 0.55, 0.07, 0.34]}>
+              <boxGeometry args={[0.05, 0.1, 0.12]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+          </group>
+        ))}
+
+        {/* sidepod intakes — dark mouths that break up the flanks */}
+        {[1, -1].map((sd) => (
+          <mesh key={sd} position={[sd * 0.62, -0.16, 0.12]} rotation={[0, sd * 0.06, 0]} castShadow>
+            <boxGeometry args={[0.16, 0.22, 0.62]} />
+            <primitive object={mat.carbon} attach="material" />
+          </mesh>
+        ))}
+
+        {/* Front wing. Two planes and endplates out past the nose — it's the
+            first thing over a crest and the last thing you see landing. */}
+        <mesh position={[0, -0.34, 2.02]} rotation={[-0.08, 0, 0]} castShadow>
+          <boxGeometry args={[1.5, 0.035, 0.3]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        <mesh position={[0, -0.27, 2.1]} rotation={[-0.22, 0, 0]} castShadow>
+          <boxGeometry args={[1.42, 0.03, 0.16]} />
+          <primitive object={mat.carbon} attach="material" />
+        </mesh>
+        {[1, -1].map((sd) => (
+          <group key={sd}>
+            <mesh position={[sd * 0.75, -0.3, 2.04]} castShadow>
+              <boxGeometry args={[0.03, 0.24, 0.42]} />
+              <primitive object={mat.carbon} attach="material" />
+            </mesh>
+            <mesh position={[sd * 0.757, -0.19, 2.04]}>
+              <boxGeometry args={[0.034, 0.05, 0.42]} />
+              <primitive object={mat.livery} attach="material" />
+            </mesh>
+          </group>
+        ))}
 
         {/* front splitter */}
         <mesh position={[0, -0.35, 1.78]} castShadow>
