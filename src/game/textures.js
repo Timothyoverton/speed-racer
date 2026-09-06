@@ -262,6 +262,38 @@ export function brickMap() {
   return t
 }
 
+// Falling water: vertical streaks of varying brightness and width. Scrolled
+// downward at runtime, which is what actually sells it as falling — a static
+// curtain just reads as tinted glass.
+export function waterfallMap() {
+  const c = document.createElement('canvas')
+  c.width = 128
+  c.height = 256
+  const g = c.getContext('2d')
+  g.fillStyle = '#8fc7de'
+  g.fillRect(0, 0, 128, 256)
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random() * 128
+    const w = 1 + Math.random() * 5
+    const y = Math.random() * 256
+    const h = 40 + Math.random() * 200
+    const a = 0.12 + Math.random() * 0.5
+    g.fillStyle = `rgba(255,255,255,${a})`
+    g.fillRect(x, y, w, h)
+    // wrap the streak so the texture tiles cleanly top to bottom
+    if (y + h > 256) g.fillRect(x, y + h - 256 - 256, w, h)
+  }
+  for (let i = 0; i < 40; i++) {
+    const x = Math.random() * 128
+    const y = Math.random() * 256
+    g.fillStyle = `rgba(70,130,160,${0.1 + Math.random() * 0.3})`
+    g.fillRect(x, y, 1 + Math.random() * 3, 30 + Math.random() * 120)
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 export function checkerMap() {
   return make('checker', () => {
     const N = 128

@@ -60,6 +60,8 @@ function build(track) {
   const rampDash = []
   const fallWater = []
   const fallMist = []
+  const cliff = []
+  const cliffColor = []
   const stripeLColor = []
   const stripeRColor = []
   const wallColor = []
@@ -287,8 +289,18 @@ function build(track) {
   }
 
   // Waterfalls: a curtain you fly through. No collider — it's weather, not a
-  // wall — plus a bank of mist where it lands.
+  // wall — plus a bank of mist where it lands, and a mountain for the water to
+  // actually come out of. Falling from nothing was the weak part.
+  // Lighter than you'd think: these are big surfaces mostly facing away from a
+  // low sun, so mid-greys render close to black.
+  const ROCK = ['#9aa0a8', '#868d96', '#a8aeb6', '#79808a', '#b2b8bf']
   for (const w of track.falls || []) {
+    const rx = Math.cos(w.yaw)
+    const rz = -Math.sin(w.yaw)
+    const fx = Math.sin(w.yaw)
+    const fz = Math.cos(w.yaw)
+    const top = w.pos[1] + 24
+
     fallWater.push({ p: [w.pos[0], w.pos[1] + 9, w.pos[2]], r: [0, w.yaw, 0], s: [w.width, 30, 0.7] })
     for (let k = 0; k < 6; k++) {
       fallMist.push({
@@ -297,12 +309,51 @@ function build(track) {
         s: [w.width / 4.5, 4.5, 3.4],
       })
     }
+
+    // The mountain the water comes out of, on the RIGHT of the road.
+    //
+    // Two things the first cut got wrong. `rx/rz` is the +LEFT vector here (see
+    // wall()), so positive offsets put the mountain on the wrong side. And the
+    // heights were absolute: the road is elevated ~30m above the grass at this
+    // point, so a "50m" mountain measured from the ground barely reached the
+    // tarmac and read as a few crates. Peaks are set relative to the ROAD now.
+    const base = -(w.width / 2 + 18) // negative = right of the road, well clear of it
+    const slabs = [
+      { out: base - 2, along: -2, w: 20, h: 16, d: 30 },
+      { out: base - 15, along: 12, w: 30, h: 34, d: 34 },
+      { out: base - 30, along: -10, w: 36, h: 24, d: 40 },
+      { out: base - 10, along: 24, w: 22, h: 8, d: 24 },
+      { out: base - 42, along: 14, w: 44, h: 46, d: 36 },
+      { out: base - 62, along: -20, w: 52, h: 30, d: 46 },
+    ]
+    slabs.forEach((sl, i) => {
+      const cx2 = w.pos[0] + rx * sl.out + fx * sl.along
+      const cz2 = w.pos[2] + rz * sl.out + fz * sl.along
+      // sl.h is now metres ABOVE THE ROAD; the block runs down to the grass
+      const peak = w.pos[1] + sl.h
+      const h = peak - groundY
+      cliff.push({
+        p: [cx2, groundY + h / 2, cz2],
+        r: [0, w.yaw + (i - 2) * 0.16, 0],
+        s: [sl.w, h, sl.d],
+      })
+      cliffColor.push(ROCK[i % ROCK.length])
+    })
+    // The ledge the water pours off. It has to overhang the road a little
+    // without sitting ON it — the first cut was 32m wide centred 16m out, which
+    // put half a mountain over the racing line.
+    cliff.push({
+      p: [w.pos[0] + rx * (base + 8), top - 5, w.pos[2]],
+      r: [0, w.yaw, -0.06],
+      s: [22, 10, 16],
+    })
+    cliffColor.push(ROCK[3])
   }
 
   return {
     road, line, dash, kerb, wall, stripeL, stripeR, post, chevronL, chevronR,
     wallBlock, wallStripe, boostPad, boostArrow, poolWater, poolWall,
-    rampDeck, rampStripe, rampLine, rampDash, fallWater, fallMist,
+    rampDeck, rampStripe, rampLine, rampDash, fallWater, fallMist, cliff, cliffColor,
     stripeLColor, stripeRColor, wallColor, hazard, gateLeg, gateBeam, pylon, pylonCap,
   }
 }

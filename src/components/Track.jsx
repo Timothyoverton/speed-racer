@@ -58,6 +58,21 @@ function Sharks({ pools }) {
   )
 }
 
+// Scrolls the waterfall texture downward. A static curtain reads as tinted
+// glass no matter how it's shaded — the motion is what makes it water.
+function WaterMotion({ fall, pool }) {
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 1 / 20)
+    if (fall?.map) {
+      fall.map.offset.y -= dt * 1.35
+      // a slow sideways drift too, so the streaks don't look like a loop
+      fall.map.offset.x += dt * 0.035
+    }
+    if (pool?.map) pool.map.offset.x += dt * 0.05
+  })
+  return null
+}
+
 export default function Track({ onFinish }) {
   const finished = useRef(false)
   const mats = useMemo(() => trackMaterials(), [])
@@ -139,6 +154,8 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.post} material={mats.post} castShadow />
       <Boxes items={VISUALS.chevronL} material={mats.chevronL} castShadow />
       <Boxes items={VISUALS.chevronR} material={mats.chevronR} castShadow />
+      <WaterMotion fall={mats.fallWater} pool={mats.water} />
+      <Boxes items={VISUALS.cliff} colors={VISUALS.cliffColor} material={mats.rock} castShadow receiveShadow />
       <Boxes items={VISUALS.fallWater} material={mats.fallWater} />
       <Boxes items={VISUALS.fallMist} material={mats.mist} />
       <Boxes items={VISUALS.rampDeck} material={mats.rampTop} castShadow receiveShadow />

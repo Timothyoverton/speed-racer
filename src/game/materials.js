@@ -9,7 +9,7 @@ import {
   concreteMap,
   grassMap,
   kerbMap,
-  checkerMap, hazardMap, brickMap } from './textures.js'
+  checkerMap, hazardMap, brickMap, waterfallMap } from './textures.js'
 import { TRACK } from './track.js'
 
 let cache = null
@@ -93,6 +93,12 @@ export function trackMaterials() {
     }),
     poolTile: new THREE.MeshStandardMaterial({ color: '#cfe6f2', roughness: 0.7, metalness: 0.05 }),
     shark: new THREE.MeshStandardMaterial({ color: '#39434f', roughness: 0.75, metalness: 0.1 }),
+    rock: new THREE.MeshStandardMaterial({
+      color: '#ffffff', // tinted per instance
+      roughness: 0.95,
+      metalness: 0.02,
+      flatShading: true,
+    }),
     brick: new THREE.MeshStandardMaterial({
       map: (() => {
         const t = brickMap()
@@ -114,10 +120,15 @@ export function trackMaterials() {
       metalness: 0.02,
     }),
     fallWater: new THREE.MeshPhysicalMaterial({
-      color: '#bfe4f2',
+      map: (() => {
+        const t = waterfallMap()
+        t.repeat.set(3, 2)
+        return t
+      })(),
+      color: '#dff2fa',
       transparent: true,
-      opacity: 0.5,
-      roughness: 0.25,
+      opacity: 0.62,
+      roughness: 0.3,
       metalness: 0,
       envMapIntensity: 0.6,
       depthWrite: false,
