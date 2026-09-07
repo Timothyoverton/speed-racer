@@ -411,6 +411,16 @@ const MEDAL_SPREAD = { author: 1, gold: 1.25, silver: 1.583, bronze: 2.083 }
 // Every refLapSec below was measured with tools/autopilot.js at the same
 // revision. They only mean anything RELATIVE to each other, so if you change how
 // the autopilot drives, re-measure all five or the tracks drift apart again.
+// When a real human clean lap exists, use it directly — it beats any estimate
+// derived from the autopilot, which drives the centreline and never cuts an
+// apex. Author sits just under the best known lap so it stays a chase.
+function medalsFromAuthor(authorSec) {
+  const author = authorSec * 1000
+  const out = {}
+  for (const k in MEDAL_SPREAD) out[k] = Math.round((author * MEDAL_SPREAD[k]) / 1000) * 1000
+  return out
+}
+
 function medalsFor(refLapSec) {
   const author = refLapSec * 1000 * AUTHOR_FACTOR
   const out = {}
@@ -689,11 +699,11 @@ const MISSION_IMPOSSIBLE = buildTrack({
   id: 'mission-impossible-5',
   name: 'Mission Impossible',
   roadWidth: 14,
-  // ESTIMATE, not measured: 63.05s was the reference lap for the previous
-  // layout of this track. The autopilot can't drive the new one — it has no
-  // concept of aiming at a stunt ramp, so it takes the wall every time. Re-measure
-  // once the harness can pick a ramp, or off a real lap.
-  medals: medalsFor(63),
+  // Set from a REAL LAP, not the autopilot: Tim ran 58.699 on 2026-09-07.
+  // Author sits a shade under that so it stays something to chase. The robot
+  // does get round this track now the ramp lip is fixed, but scrappily — 99.5s
+  // with three dead stops — so a human clean lap is the better reference here.
+  medals: medalsFromAuthor(57),
   course: [
     ['start'],
     ['straight', 110],
