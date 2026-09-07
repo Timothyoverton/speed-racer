@@ -74,11 +74,18 @@ export function initAudio() {
   engineFilter.connect(shaper)
   shaper.connect(master)
 
+  // A real engine is a stack of harmonics with the odd ones dominant, not two
+  // detuned saws. Half-order (the lumpy bit you hear at idle), the fundamental,
+  // then 1.5x / 2x / 3x / 4x thinning out, each slightly detuned so they beat
+  // against each other instead of sounding like an organ.
   const oscs = [
+    { type: 'square', mult: 0.5, detune: -7, level: 0.34 },
     { type: 'sawtooth', mult: 1, detune: 0, level: 0.5 },
-    { type: 'sawtooth', mult: 1, detune: 11, level: 0.35 },
-    { type: 'square', mult: 0.5, detune: -6, level: 0.4 },
-    { type: 'sawtooth', mult: 2, detune: 4, level: 0.16 },
+    { type: 'sawtooth', mult: 1, detune: 12, level: 0.3 },
+    { type: 'square', mult: 1.5, detune: -4, level: 0.14 },
+    { type: 'sawtooth', mult: 2, detune: 5, level: 0.17 },
+    { type: 'sawtooth', mult: 3, detune: -9, level: 0.09 },
+    { type: 'sawtooth', mult: 4, detune: 7, level: 0.05 },
   ].map((o) => {
     const osc = ctx.createOscillator()
     osc.type = o.type
@@ -164,15 +171,24 @@ export function updateAudio(s) {
 
   // engine note: base frequency tracks rpm, ~1 cycle per 2 revs of a V8-ish thing
   const f = 26 + s.rpm * 0.019
+  // Airborne the note has to CHANGE, not just rise: with no load the engine is
+  // thinner and harder, so the pitch tracks faster and the filter opens right
+  // up. Pitch alone reads as the same engine going quicker.
+  const air = !s.grounded
+  const glide = air ? 0.008 : 0.02
   for (const { osc, mult } of nodes.oscs) {
-    osc.frequency.setTargetAtTime(f * mult, t, 0.02)
+    osc.frequency.setTargetAtTime(f * mult, t, glide)
   }
   const load = Math.max(s.throttle, 0.18)
-  nodes.engineGain.gain.setTargetAtTime(0.06 + load * 0.11 + s.rpm01 * 0.05, t, k)
-  nodes.engineFilter.frequency.setTargetAtTime(
-    340 + s.rpm * 0.32 + s.throttle * 1500,
+  nodes.engineGain.gain.setTargetAtTime(
+    0.06 + load * 0.11 + s.rpm01 * 0.05 - (air ? 0.02 : 0),
     t,
-    k,
+    air ? 0.02 : k,
+  )
+  nodes.engineFilter.frequency.setTargetAtTime(
+    340 + s.rpm * 0.32 + s.throttle * 1500 + (air ? 1700 : 0),
+    t,
+    air ? 0.02 : k,
   )
 
   const speed01 = Math.min(s.speed / 62, 1.2)

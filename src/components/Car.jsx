@@ -248,7 +248,7 @@ export default function Car({ recorder }) {
     carState.brake = THREE.MathUtils.lerp(carState.brake, brakeTarget, 1 - Math.exp(-14 * dt))
     carState.handbrake = racing && input.handbrake
 
-    const rpm01 = updateDrivetrain(vForward)
+    const rpm01 = updateDrivetrain(vForward, { grounded, throttle: carState.throttle, dt })
 
     // Drive with impulses (not linvel overrides) so Rapier's own collision
     // response — bouncing off the barriers, which have restitution — still lands.

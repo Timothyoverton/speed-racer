@@ -52,20 +52,38 @@ export default function Scenery() {
     const scrub = []
     const scrubColor = []
 
-    // treeline — a broken ring well outside the barriers
-    for (let i = 0; i < 260; i++) {
+    // Forest, scattered around the ROAD rather than ringed around the bounds
+    // circle. The ring version put every tree at R+20..R+750 from the centre of
+    // the track's bounding box, which on a 2.3km course is 1200-1900m away —
+    // past the fog, so the landscape came out bare. Sampling the whole ground
+    // area and rejecting anything near the tarmac puts woodland everywhere the
+    // car actually goes, including the infield.
+    const TREE_CLEAR = TRACK.roadWidth / 2 + 16
+    const reach = R + 320
+    for (let i = 0, tries = 0; i < 1500 && tries < 26000; tries++) {
+      // uniform over the disc, then clumped so thickets and clearings form
       const a = r() * Math.PI * 2
-      const rad = R + 22 + r() * 190
+      const u = r()
+      const clump = u * u * 0.55 + u * 0.45
+      const rad = Math.sqrt(clump) * reach
       const x = cx + Math.cos(a) * rad
       const z = cz + Math.sin(a) * rad
-      const h = 4.5 + r() * 8.5
-      const w = 2.0 + r() * 2.2
+      const on = sampleTrack(x, z)
+      if (on && Math.abs(on.lateral) < TREE_CLEAR) continue
+      i++
+
+      const h = 4.5 + r() * 9.5
+      const w = 2.0 + r() * 2.4
       const tint = LEAF[(r() * LEAF.length) | 0]
       trunks.push({ p: [x, gy + h * 0.22, z], r: [0, r() * 3, 0], s: [0.5, h * 0.45, 0.5] })
       // two stacked cones give a conifer a waist instead of a single triangle
       canopies.push({ p: [x, gy + h * 0.62, z], r: [0, r() * 3, 0], s: [w, h * 0.8, w] })
       canopyColor.push(tint)
-      canopies.push({ p: [x, gy + h * 0.98, z], r: [0, r() * 3, 0], s: [w * 0.66, h * 0.6, w * 0.66] })
+      canopies.push({
+        p: [x, gy + h * 0.98, z],
+        r: [0, r() * 3, 0],
+        s: [w * 0.66, h * 0.6, w * 0.66],
+      })
       canopyColor.push(tint)
     }
 

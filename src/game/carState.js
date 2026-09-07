@@ -75,7 +75,31 @@ const GEAR_TOPS = [11, 19, 28, 38, 49, 62]
 const IDLE_RPM = 900
 const MAX_RPM = 8200
 
-export function updateDrivetrain(vForward) {
+// Revs with no load on them. Airborne, the wheels aren't driving anything, so
+// the engine does what a real one does off the ground: flares straight to the
+// limiter on throttle and drops away when you lift. Driven here rather than in
+// the audio layer so the HUD rev bar and gear readout flare with it.
+let freeRev = 0
+
+export function updateDrivetrain(vForward, opts = {}) {
+  const { grounded = true, throttle = 0, dt = 1 / 60 } = opts
+  if (!grounded) {
+    // no load: climbs fast, falls back slower, and bounces on the limiter
+    const target = throttle > 0.05 ? 1 : 0.12
+    const rate = throttle > 0.05 ? 2.6 : 1.1
+    freeRev += (target - freeRev) * Math.min(rate * dt, 1)
+    const bounce = freeRev > 0.94 ? Math.sin(performance.now() / 22) * 0.035 : 0
+    const r = Math.min(Math.max(freeRev + bounce, 0), 1)
+    carState.gear = Math.abs(vForward) < 0.4 ? 1 : carState.gear
+    carState.rpm = IDLE_RPM + r * (MAX_RPM - IDLE_RPM)
+    carState.rpm01 = r
+    return r
+  }
+  freeRev = carState.rpm01
+  return groundedDrivetrain(vForward)
+}
+
+function groundedDrivetrain(vForward) {
   const v = Math.abs(vForward)
   let gear = 0
   while (gear < GEAR_TOPS.length - 1 && v > GEAR_TOPS[gear]) gear++
