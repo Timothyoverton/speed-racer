@@ -60,7 +60,7 @@ export default function Scenery() {
     // car actually goes, including the infield.
     const TREE_CLEAR = TRACK.roadWidth / 2 + 16
     const reach = R + 320
-    for (let i = 0, tries = 0; i < 1500 && tries < 26000; tries++) {
+    for (let i = 0, tries = 0; i < 3000 && tries < 52000; tries++) {
       // uniform over the disc, then clumped so thickets and clearings form
       const a = r() * Math.PI * 2
       const u = r()
