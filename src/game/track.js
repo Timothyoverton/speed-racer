@@ -699,11 +699,16 @@ const MISSION_IMPOSSIBLE = buildTrack({
   id: 'mission-impossible-5',
   name: 'Mission Impossible',
   roadWidth: 14,
-  // Set from a REAL LAP, not the autopilot: Tim ran 58.699 on 2026-09-07.
-  // Author sits a shade under that so it stays something to chase. The robot
-  // does get round this track now the ramp lip is fixed, but scrappily — 99.5s
-  // with three dead stops — so a human clean lap is the better reference here.
-  medals: medalsFromAuthor(57),
+  // Set from REAL LAPS, not the autopilot. Tim went 1:06.8 -> 58.699 -> 53.004
+  // inside half an hour while still learning the track, so pinning Author just
+  // under each new best was a treadmill: he'd beat it again within minutes and
+  // it can never be won by definition.
+  //
+  // 50s is pitched ahead of where he is now but inside reach once the track is
+  // dialled in — an "excellent lap", which is what an Author medal is supposed
+  // to mean. Deliberately NOT chasing the record any further; the record lives
+  // on the leaderboard, the medal is a fixed bar. This is the last retune.
+  medals: medalsFromAuthor(50),
   course: [
     ['start'],
     ['straight', 110],
