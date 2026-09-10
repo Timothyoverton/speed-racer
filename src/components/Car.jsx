@@ -15,7 +15,8 @@ import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game
 import { updateAudio, idleAudio, thud, initAudio, boostWhoosh } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
 import { stopMusic } from '../game/music.js'
-import { sampleTrack } from '../game/trackQuery.js'
+import { sampleTrack, trackProgress } from '../game/trackQuery.js'
+import * as net from '../game/net.js'
 
 // --- tuning (all in m, s) ---------------------------------------------------
 const ACCEL = 16 // m/s^2 at full throttle (tapers to 0 near MAX_SPEED)
@@ -443,6 +444,18 @@ export default function Car({ recorder }) {
     }
 
     if (racing && recorder) recorder.sample(elapsedMs(), t, rot)
+
+    // multiplayer: stream our transform to the opponent (self-throttled to 15Hz)
+    if (net.session.active && (racing || phase === 'countdown')) {
+      net.sendTelemetry({
+        pos: [t.x, t.y, t.z],
+        quat: [rot.x, rot.y, rot.z, rot.w],
+        speed,
+        prog: trackProgress(t.x, t.z),
+        air: !grounded,
+        raceMs: elapsedMs(),
+      })
+    }
 
     if (import.meta.env.DEV) {
       window.__body = b

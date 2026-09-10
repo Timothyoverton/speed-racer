@@ -2,10 +2,12 @@ import { useMemo } from 'react'
 import Track from './Track.jsx'
 import Car from './Car.jsx'
 import Ghost from './Ghost.jsx'
+import RemoteCar from './RemoteCar.jsx'
 import Effects from './Effects.jsx'
 import { resetCarState } from '../game/carState.js'
 import { TRACK, CHECKPOINT_COUNT } from '../game/track.js'
-import { finishRace } from '../game/store.js'
+import { finishRace, getState } from '../game/store.js'
+import * as net from '../game/net.js'
 import { resetProgress } from '../game/progress.js'
 import { resetHud, hud } from '../game/hud.js'
 import { resetTimer, stopTimer } from '../game/timing.js'
@@ -34,6 +36,7 @@ export default function Race() {
     const topKmh = Math.round(hud.topSpeedKmh)
     const { isPB } = submitTime(TRACK.id, name, timeMs, topKmh)
     if (isPB) recorder.save(TRACK.id)
+    if (getState().multiplayer) net.sendFinish({ timeMs, topKmh })
     finishRace({
       timeMs,
       isPB,
@@ -44,10 +47,13 @@ export default function Race() {
     })
   }
 
+  const mp = getState().multiplayer
+
   return (
     <>
       <Track onFinish={onFinish} />
       <Ghost />
+      {mp && <RemoteCar />}
       <Car recorder={recorder} />
       <Effects />
     </>

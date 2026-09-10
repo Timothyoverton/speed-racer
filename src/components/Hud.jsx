@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { hud } from '../game/hud.js'
 import { formatTime, formatDelta } from '../game/format.js'
 import { isMuted, toggleMute } from '../game/audio.js'
+import { netState, session } from '../game/net.js'
 
 // Reads the mutable `hud` bag on its own rAF and paints straight into refs.
 // Never triggers a React render (the mute toggle is the one exception).
@@ -18,6 +19,7 @@ export default function Hud() {
   const airRef = useRef(null)
   const boostRef = useRef(null)
   const boostNumRef = useRef(null)
+  const oppRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -63,6 +65,18 @@ export default function Hud() {
           d.className = 'delta ' + (hud.ghostDeltaMs <= 0 ? 'ahead' : 'behind')
         }
       }
+      if (oppRef.current) {
+        const g = session.active ? netState.gapM : null
+        if (g == null) {
+          oppRef.current.style.opacity = '0'
+        } else {
+          const ahead = g >= 0
+          const m = Math.abs(Math.round(g))
+          oppRef.current.style.opacity = '1'
+          oppRef.current.textContent = (ahead ? '▲ ahead ' : '▼ behind ') + m + ' m'
+          oppRef.current.className = 'opp-gap ' + (ahead ? 'ahead' : 'behind')
+        }
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -79,6 +93,9 @@ export default function Hud() {
         <span ref={timeRef}>0:00.000</span>
         <span ref={deltaRef} className="delta" />
       </div>
+
+      <div className="opp-gap" ref={oppRef} style={{ opacity: 0 }} />
+
 
       <div className="progress">
         checkpoints <b ref={cpRef}>0 / 0</b>

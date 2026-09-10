@@ -8,9 +8,10 @@ import { startTimer, resetTimer } from './timing.js'
 const listeners = new Set()
 
 let state = {
-  phase: 'menu', // 'menu' | 'countdown' | 'racing' | 'finished'
+  phase: 'menu', // 'menu' | 'lobby' | 'countdown' | 'racing' | 'finished'
   runId: 0, // bump to force a full car + physics reset
   result: null, // { timeMs, isPB, medal, prevBest, delta }
+  multiplayer: false, // is the current countdown/race/result a two-player one
 }
 
 function emit() {
@@ -36,6 +37,10 @@ export function usePhase() {
   return useSyncExternalStore(subscribe, () => state.phase)
 }
 
+export function useMultiplayer() {
+  return useSyncExternalStore(subscribe, () => state.multiplayer)
+}
+
 export function useRunId() {
   return useSyncExternalStore(subscribe, () => state.runId)
 }
@@ -48,7 +53,14 @@ export function useResult() {
 
 export function startCountdown() {
   resetTimer()
-  setState((s) => ({ phase: 'countdown', runId: s.runId + 1, result: null }))
+  setState((s) => ({ phase: 'countdown', runId: s.runId + 1, result: null, multiplayer: false }))
+}
+
+// Same as startCountdown but flags the run as two-player. The Countdown
+// component paces itself off net.session.startAtLocal in this mode.
+export function startMultiplayerCountdown() {
+  resetTimer()
+  setState((s) => ({ phase: 'countdown', runId: s.runId + 1, result: null, multiplayer: true }))
 }
 
 export function beginRacing() {
@@ -60,6 +72,10 @@ export function finishRace(result) {
   setState({ phase: 'finished', result })
 }
 
+export function enterLobby() {
+  setState({ phase: 'lobby', result: null })
+}
+
 export function toMenu() {
-  setState({ phase: 'menu', result: null })
+  setState({ phase: 'menu', result: null, multiplayer: false })
 }

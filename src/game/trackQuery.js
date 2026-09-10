@@ -73,3 +73,17 @@ export function sampleTrack(x, z) {
     offRoad: abs > HALF + 0.3,
   }
 }
+
+// 0..1 progress along the centreline for an arbitrary (x, z), for the
+// multiplayer gap readout. Falls back to the last known value while the car is
+// airborne / off the grid (sampleTrack returns null there).
+let lastProg = 0
+export function trackProgress(x, z) {
+  const s = sampleTrack(x, z)
+  if (!s) return lastProg
+  const tile = s.tile
+  const half = tile.size[2] / 2
+  const d = tile.dist + half + s.along
+  lastProg = Math.min(Math.max(d / (TRACK.length || 1), 0), 1)
+  return lastProg
+}

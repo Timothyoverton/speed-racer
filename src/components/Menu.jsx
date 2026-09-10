@@ -8,6 +8,7 @@ import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.j
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
 import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
+import { hostRace } from '../game/mp.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
@@ -27,6 +28,13 @@ export default function Menu() {
     // iOS only grants motion access from a gesture too, so ask on the same tap
     if (touchControlsActive()) enableTilt()
     startCountdown()
+  }
+
+  function raceFriend() {
+    setName(name.trim())
+    initAudio()
+    if (touchControlsActive()) enableTilt()
+    hostRace()
   }
 
   return (
@@ -141,6 +149,9 @@ export default function Menu() {
           onChange={(e) => setNameState(e.target.value)}
         />
         <button className="cta" onClick={drive}>DRIVE</button>
+        <button className="ghost" onClick={raceFriend}>
+          🏁 Race a friend
+        </button>
 
         <div className="hint">
           <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />
