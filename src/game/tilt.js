@@ -51,8 +51,11 @@ function axisFor(e) {
   return e.gamma // portrait, and the 0-degree landscape case on some devices
 }
 
+let sawReading = false
+
 function onOrientation(e) {
   if (e.beta == null && e.gamma == null) return
+  sawReading = true
   const raw = axisFor(e) || 0
   tilt.raw = raw
   const off = raw - tilt.zero
@@ -92,11 +95,19 @@ export async function enableTilt() {
     tilt.permission = 'granted'
   }
   if (!tilt.active) {
+    sawReading = false
     window.addEventListener('deviceorientation', onOrientation)
     tilt.active = true
   }
-  // give it a moment of readings, then treat the current pose as level
-  setTimeout(calibrateTilt, 400)
+  // give it a moment of readings, then treat the current pose as level —
+  // but only if the device is actually feeding us orientation. A laptop with
+  // no accelerometer registers DeviceOrientationEvent yet never fires it (or
+  // fires it with static zeros), and calibrating there would pin input.axis
+  // to 0 and kill keyboard steering.
+  setTimeout(() => {
+    if (sawReading) calibrateTilt()
+    else disableTilt()
+  }, 600)
   return true
 }
 

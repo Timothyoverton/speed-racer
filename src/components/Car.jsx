@@ -237,8 +237,15 @@ export default function Car({ recorder }) {
     // --- smoothed driver input ---------------------------------------------
     // +1 = steering left (toward +X / screen-left with the chase camera)
     const keySteer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
-    // tilt (analog) wins when the phone is providing it, keys otherwise
-    const steerTarget = racing ? (input.axis != null ? input.axis : keySteer) : 0
+    // A held steering key ALWAYS wins. Otherwise fall back to tilt if the phone
+    // is providing it. (`enableTilt()` calibrates input.axis to 0 on a laptop
+    // with a dead motion sensor, which used to silently kill keyboard left/right
+    // the moment "Race a friend" or DRIVE ran on a touchscreen laptop.)
+    const steerTarget = !racing
+      ? 0
+      : keySteer !== 0 || input.axis == null
+        ? keySteer
+        : input.axis
     const sk = 1 - Math.exp(-STEER_RATE * dt)
     carState.steer = THREE.MathUtils.lerp(carState.steer, steerTarget, sk)
     const steer = carState.steer

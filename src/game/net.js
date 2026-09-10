@@ -114,8 +114,11 @@ export function clearJoinParams() {
 
 // ---- connection ----------------------------------------------------
 
+let selfProfile = { name: 'Racer', colour: '#2f6dff', track: '' }
+
 export function connect({ roomCode, name, colour, track, isHost }) {
   disconnect()
+  selfProfile = { name, colour, track }
   session.active = true
   session.roomCode = roomCode
   session.isHost = isHost
@@ -138,7 +141,7 @@ export function connect({ roomCode, name, colour, track, isHost }) {
 
   socket.addEventListener('open', () => {
     netState.connected = true
-    send({ type: 'hello', name, colour, track })
+    send({ type: 'hello', ...selfProfile })
     startPinging()
     emit('open')
   })
@@ -269,6 +272,14 @@ function handle(msg) {
 }
 
 // ---- outbound helpers --------------------------------------------
+
+// Change your display name / colour while in the lobby. Re-uses `hello`, which
+// the server treats as a profile update and re-broadcasts the roster.
+export function updateProfile({ name, colour }) {
+  if (name != null) selfProfile.name = name
+  if (colour != null) selfProfile.colour = colour
+  send({ type: 'hello', ...selfProfile })
+}
 
 export function sendReady(ready) {
   send({ type: 'ready', ready })

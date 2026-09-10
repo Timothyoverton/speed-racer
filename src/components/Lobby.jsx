@@ -4,6 +4,7 @@ import { TRACK } from '../game/track.js'
 import * as net from '../game/net.js'
 import { leaveRace } from '../game/mp.js'
 import { PARTYKIT_CONFIGURED } from '../game/net-config.js'
+import { getName, setName } from '../game/leaderboard.js'
 
 export default function Lobby() {
   const [roster, setRoster] = useState(net.session.roster)
@@ -14,8 +15,16 @@ export default function Lobby() {
   const [oppLeft, setOppLeft] = useState(false)
 
   const [copied, setCopied] = useState(false)
+  const [name, setNameState] = useState(() => getName() || '')
   const code = net.session.roomCode
   const url = code ? net.joinUrl(code, TRACK.id) : ''
+
+  function onName(v) {
+    const clean = v.slice(0, 16)
+    setNameState(clean)
+    setName(clean.trim())
+    net.updateProfile({ name: clean.trim() || 'Racer' })
+  }
 
   function flashCopied() {
     setCopied(true)
@@ -136,6 +145,15 @@ export default function Lobby() {
           Same device? Open this link in a second tab or window. Different device?
           Scan the QR.
         </div>
+
+        <input
+          className="name"
+          style={{ marginTop: 14 }}
+          placeholder="Your name"
+          maxLength={16}
+          value={name}
+          onChange={(e) => onName(e.target.value)}
+        />
 
         <div className="mp-players">
           <PlayerRow player={me} label="You" isSelf />

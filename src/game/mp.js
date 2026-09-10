@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 import * as net from './net.js'
 import { TRACK, TRACKS } from './track.js'
 import { getName } from './leaderboard.js'
-import { getCarColour } from './carColour.js'
+import { getCarColour, CAR_COLOURS, setCarColourId } from './carColour.js'
 import {
   enterLobby,
   toMenu,
@@ -96,9 +96,24 @@ export function leaveRace() {
 }
 
 // Wires net events -> store transitions. Mount once, near the app root.
+// If both players picked the same paint, nudge the guest (slot 2) onto a
+// free colour so the two cars are always distinguishable on track.
+function dedupeColour(roster) {
+  const me = roster.find((p) => p.id === net.session.selfId)
+  const them = roster.find((p) => p.id !== net.session.selfId)
+  if (!me || !them || me.slot === 1) return
+  if (me.colour.toLowerCase() !== them.colour.toLowerCase()) return
+  const free = CAR_COLOURS.find((c) => c.hex.toLowerCase() !== them.colour.toLowerCase())
+  if (free) {
+    setCarColourId(free.id)
+    net.updateProfile({ colour: free.hex })
+  }
+}
+
 export function useMultiplayerCoordinator() {
   useEffect(() => {
     const offs = [
+      net.on('roster', dedupeColour),
       net.on('start', () => {
         // only react if we're still sitting in the lobby (or a stale race)
         if (getState().phase === 'lobby' || getState().phase === 'finished') {
