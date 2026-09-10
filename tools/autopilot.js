@@ -9,11 +9,16 @@
 //   __AP.chunk(2400)        // repeat until .done
 //   __AP.end()
 //
-// It steers at a lookahead point on the centreline and brakes whenever a corner
-// inside its scan needs a speed it can't decelerate to, using the game's own
-// v^2/20.8 radius rule. It drives the centreline, not a racing line — it never
-// cuts an apex — so it's "a fast clean lap", not a theoretical optimum.
-// Repeatable to ~0.2%.
+// It aims at a lookahead point on the centreline and steers toward it with a PD
+// law on the heading error (P eases onto the line, D damps the swing so it
+// settles instead of sawing full-lock either side — which also keeps yaw rate
+// low going over a jump lip). It brakes whenever a corner inside its scan needs
+// a speed it can't decelerate to, using the game's own v^2/20.8 radius rule. It
+// drives the centreline, not a racing line — it never cuts an apex — so it's
+// "a fast clean lap", not a theoretical optimum. Repeatable to ~0.2%.
+// (Exception: where a track has wall blocks ON the road — only Mission
+// Impossible — install() bends the followed line around them, so through the
+// slalom it does drive a racing line.)
 //
 // TWO THINGS THAT WILL WASTE YOUR AFTERNOON IF YOU REWRITE THIS:
 //
@@ -27,7 +32,7 @@
 //     to sim time or you record how long your loop took, not the lap.
 
 export const AP = {
-  DEFAULTS: { look0: 9, lookV: 0.42, dead: 0.02, scan: 170, decel: 14, steerSign: -1 },
+  DEFAULTS: { look0: 9, lookV: 0.42, dead: 0.02, scan: 170, decel: 14, steerSign: -1, steerFull: 0.12, damp: 11 },
 
   install() {
     const T = window.__track
@@ -43,42 +48,68 @@ export const AP = {
       const k = Math.abs(dy) / Math.max(b.d - a.d, 0.01)
       vmax[i] = k < 2e-4 ? 999 : Math.sqrt(20.8 / k)
     }
-    // wall blocks, in road-local terms, so control() can pick the open side
+    // Bend the followed line around the wall blocks — a racing line through the
+    // slalom, like a real track, instead of the raw centreline the blocks sit
+    // on top of. Pure pursuit then threads them with no last-moment dodge.
+    // Only Mission Impossible has walls and its medals are hand-set, so this
+    // never moves a reference lap.
     const half = T.roadWidth / 2
-    const walls = (T.walls || []).map((w) => {
-      const dx = w.pos[0] - 0
-      const dz = w.pos[2] - 0
-      void dx
-      void dz
-      return { pos: w.pos, yaw: w.yaw, w: w.size[0], lat: 0 }
-    })
-    // recover each block's lateral offset from its world position vs the tile
-    // nearest it along the course
-    for (const w of walls) {
-      let best = 0
-      let bd = Infinity
+    const CAR_HALF = 1.4 // car half-width + a little slack
+    const WEAVE = []
+    for (const w of T.walls || []) {
+      // tile nearest the block, and the block's lateral offset from the line
+      let bi = 0, bd = Infinity
       for (let k = 0; k < N; k++) {
         const d = (P[k].x - w.pos[0]) ** 2 + (P[k].z - w.pos[2]) ** 2
-        if (d < bd) { bd = d; best = k }
+        if (d < bd) { bd = d; bi = k }
       }
-      const t0 = P[best]
-      w.lat = (w.pos[0] - t0.x) * Math.cos(t0.yaw) - (w.pos[2] - t0.z) * Math.sin(t0.yaw)
+      const b = P[bi]
+      const lat = (w.pos[0] - b.x) * Math.cos(b.yaw) - (w.pos[2] - b.z) * Math.sin(b.yaw)
+      const wHalf = w.size[0] / 2
+      const lo = lat - wHalf - CAR_HALF // block's near edges, in the car's terms
+      const hi = lat + wHalf + CAR_HALF
+      // aim for the middle of whichever gap (block-edge to barrier) is wider
+      const leftGap = lo - -half
+      const rightGap = half - hi
+      let off = leftGap > rightGap ? (lo + -half) / 2 : (hi + half) / 2
+      off = Math.max(-half + CAR_HALF, Math.min(half - CAR_HALF, off))
+      WEAVE.push({ bi, off })
     }
-    Object.assign(this, { P, vmax, N, cursor: 0, walls, roadHalf: half })
-    return { track: T.id, tiles: N, lenM: Math.round(T.length) }
+    // apply the bumps after measuring them all, so overlapping ones (the 60m
+    // slalom) add into a smooth S rather than each seeing a moved line
+    const SPAN = 9 // tiles of smoothstep falloff each side of a block
+    const bent = P.map((p) => ({ ...p }))
+    for (const { bi, off } of WEAVE) {
+      for (let k = Math.max(0, bi - SPAN); k < Math.min(N, bi + SPAN + 1); k++) {
+        const tt = 1 - Math.abs(k - bi) / SPAN
+        const s = tt * tt * (3 - 2 * tt)
+        bent[k].x += Math.cos(P[k].yaw) * off * s
+        bent[k].z += -Math.sin(P[k].yaw) * off * s
+        vmax[k] = Math.min(vmax[k], 34) // ~122 km/h through the weave
+      }
+    }
+    for (let k = 0; k < N; k++) { P[k].x = bent[k].x; P[k].z = bent[k].z }
+    Object.assign(this, { P, vmax, N, cursor: 0, roadHalf: half })
+    return { track: T.id, tiles: N, lenM: Math.round(T.length), weave: WEAVE.length }
   },
 
   control(cfg) {
     const { P, vmax, N } = this, car = window.__car, inp = window.__input
     const px = car.pos[0], pz = car.pos[2]
-    // Nearest tile in a bounded window AHEAD of where we were. The obvious
-    // version — walk forward while the car projects past the next tile — runs
-    // away: one airborne stretch, or a course that bends back near itself, and
-    // the cursor ends up hundreds of metres up the track. It can only move
-    // forward, so it never recovers, and the car gets steered at a point behind
-    // a hill and drives off into the infield at a steady 50km/h forever.
+    // Nearest tile. Normally a bounded window AHEAD of where we were — the
+    // forward-only walk keeps a course that bends back near itself from
+    // snapping the cursor hundreds of metres up the track. But a respawn
+    // teleports the car backwards, and the window can't follow it, so detect
+    // the teleport (one frame's move is far larger than driving can manage) and
+    // rescan the whole line that frame.
+    const lp = this._lastPos
+    const teleported = lp && Math.hypot(px - lp[0], pz - lp[1]) > 15
+    this._lastPos = [px, pz]
+    if (teleported) this._lastErr = null // don't let the position jump spike D
     let i = this.cursor, best = Infinity
-    for (let k = this.cursor; k < Math.min(N, this.cursor + 60); k++) {
+    const from = teleported ? 0 : this.cursor
+    const to = teleported ? N : Math.min(N, this.cursor + 60)
+    for (let k = from; k < to; k++) {
       const dx = P[k].x - px, dz = P[k].z - pz
       const d = dx * dx + dz * dz
       if (d < best) { best = d; i = k }
@@ -90,35 +121,31 @@ export const AP = {
     const look = cfg.look0 + cfg.lookV * v
     while (j < N - 1 && P[j].d - P[i].d < look) j++
 
-    // Aim point, shifted sideways to dodge any wall block we're closing on.
-    // Mission Impossible's blocks overlap the centreline, so a centreline
-    // autopilot drives straight into them; without this it can't complete a
-    // lap and there's no reference time to set medals from.
-    let tx = P[j].x
-    let tz = P[j].z
-    if (this.walls && this.walls.length) {
-      const half = this.roadHalf
-      for (const w of this.walls) {
-        const ahead = (w.pos[0] - px) * Math.sin(w.yaw) + (w.pos[2] - pz) * Math.cos(w.yaw)
-        if (ahead < 0 || ahead > 75) continue
-        const lo = w.lat - w.w / 2
-        const hi = w.lat + w.w / 2
-        // middle of whichever side is open, measured from the CENTRELINE
-        const target = lo > -half ? (-half + lo) / 2 : (hi + half) / 2
-        // Shift the normal lookahead point sideways. Aiming at a spot beyond
-        // the wall instead (the first attempt) turns a 7m offset into a
-        // fraction of a degree of heading error at 60m out, so the car doesn't
-        // begin moving until it's already too late to miss anything.
-        tx = P[j].x + Math.cos(P[j].yaw) * target
-        tz = P[j].z - Math.sin(P[j].yaw) * target
-        break
-      }
-    }
+    // Aim point: just the followed line, which install() has already bent
+    // around any wall blocks.
+    const tx = P[j].x
+    const tz = P[j].z
     let err = Math.atan2(tx - px, tz - pz) - Math.atan2(car.fwd[0], car.fwd[2])
     while (err > Math.PI) err -= 2 * Math.PI
     while (err < -Math.PI) err += 2 * Math.PI
-    inp.left = err * cfg.steerSign < -cfg.dead
-    inp.right = err * cfg.steerSign > cfg.dead
+    // PD steering via input.axis (-1..1), NOT full-lock left/right booleans.
+    // P eases the car onto the line; D (the frame-to-frame change in heading
+    // error) damps the swing so it settles instead of sawing full-lock past the
+    // line each time — which is what wrecked jump approaches, where any yaw rate
+    // at the lip throws the whole flight. cfg.steerFull is the error (rad) that
+    // asks for full P lock; sharper saturates, like the old booleans. Sign
+    // matches the old booleans: they set left (keySteer +1 in Car.jsx) when
+    // err*steerSign was negative, i.e. keySteer = -sign(err*steerSign).
+    const derr = this._lastErr == null ? 0 : err - this._lastErr
+    this._lastErr = err
+    const cmd = err / cfg.steerFull + derr * cfg.damp
+    let steer = Math.abs(err) < cfg.dead && Math.abs(derr) < cfg.dead ? 0 : -(cmd * cfg.steerSign)
+    steer = Math.max(-1, Math.min(1, steer))
+    if (this._lastSteer != null && steer * this._lastSteer < 0) this._steerFlips = (this._steerFlips || 0) + 1
+    this._lastSteer = steer
+    inp.left = false
+    inp.right = false
+    inp.axis = steer
 
     let brake = false
     for (let k = i; k < N && P[k].d - P[i].d < cfg.scan; k++) {
@@ -132,7 +159,8 @@ export const AP = {
   begin(cfg) {
     const st = window.__three
     this.cfg = cfg; this.steps = 0; this.top = 0; this.air = 0; this.cursor = 0
-    this.log = []; this.minY = Infinity; this.respawns = 0
+    this.log = []; this.minY = Infinity; this.respawns = 0; this._lastPos = null
+    this._lastErr = null; this._lastSteer = null; this._steerFlips = 0
     this.lastXZ = [window.__car.pos[0], window.__car.pos[2]]
     st.setFrameloop ? st.setFrameloop('never') : (st.frameloop = 'never')
     this._sec = st.clock.elapsedTime          // SECONDS. see the note above.
@@ -173,11 +201,12 @@ export const AP = {
     performance.now = this._now
     st.gl.render = this._render
     inp.forward = inp.back = inp.left = inp.right = false
+    inp.axis = null
     st.setFrameloop ? st.setFrameloop('always') : (st.frameloop = 'always')
     return { finished: window.__dbg.phase === 'finished', refLapSec: +(this.steps / 60).toFixed(2),
              trackM: Math.round(window.__track.length), topKmh: Math.round(this.top),
              airSec: +(this.air / 60).toFixed(1), lowestY: +this.minY.toFixed(1),
-             respawns: this.respawns,
+             respawns: this.respawns, steerFlips: this._steerFlips,
              cp: window.__dbg.next + '/' + window.__track.checkpoints.length, log: this.log }
   },
 }

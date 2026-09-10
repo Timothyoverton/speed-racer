@@ -31,7 +31,7 @@ Not CI. Needs a display + GPU; never wired into `npm run deploy`.
 
 | File | What it covers |
 | --- | --- |
-| `solo.spec.js` | Autopilot drives the 4 flowing tracks to the finish (completion + loose time band). Set-piece tracks (Stunt Park, Mission Impossible) get a "loads + first section drivable" smoke check only — their gaps need frame-perfect entry speed the real loop can't hold, so full completion is the offline harness's job. Plus a held-key drive/steer check (guards regression 91b9aea). |
+| `solo.spec.js` | Autopilot drives the 4 flowing tracks to the finish (completion + loose time band), and threads **Mission Impossible** end to end (its followed line is bent around the slalom blocks in `autopilot.js` `install()`; completion + all 3 checkpoints, no time band — it still respawns through the big gaps). **Stunt Park** gets a "loads + first section drivable" smoke check only — its gaps need frame-perfect entry speed the real loop can't hold. Plus a held-key drive/steer check (guards regression 91b9aea). |
 | `multiplayer.spec.js` | Two browser contexts against the **deployed** relay: host + deep-link join, synced countdown, live opponent car on the other screen, gap HUD, head-to-head result, rematch. Spawns its own Vite server on 5273 with `VITE_PARTYKIT_HOST` set (a DEV build otherwise points the client at `127.0.0.1:1999`). |
 | `perf.spec.js` | rAF frame-time stats (mean / p50 / p95 / p99 / long frames) on the heaviest track, single instance and two side-by-side. Soft gates; the logged numbers are the point — tune after a baseline on Tim's GPU. |
 | `tilt.spec.js` | CDP device-orientation override: the tilt axis reaches `window.__input.axis` and tracks the gyro, and a held arrow key still overrides it (regression 91b9aea). |

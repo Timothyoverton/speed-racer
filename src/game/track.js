@@ -409,8 +409,9 @@ const AUTHOR_FACTOR = 1.58
 const MEDAL_SPREAD = { author: 1, gold: 1.25, silver: 1.583, bronze: 2.083 }
 
 // Every refLapSec below was measured with tools/autopilot.js at the same
-// revision. They only mean anything RELATIVE to each other, so if you change how
-// the autopilot drives, re-measure all five or the tracks drift apart again.
+// revision (best clean lap; PD steering, 2026-09-11). They only mean anything
+// RELATIVE to each other, so if you change how the autopilot drives, re-measure
+// all five or the tracks drift apart again.
 // When a real human clean lap exists, use it directly — it beats any estimate
 // derived from the autopilot, which drives the centreline and never cuts an
 // apex. Author sits just under the best known lap so it stays a chase.
@@ -435,7 +436,7 @@ const TEST_PAD = buildTrack({
   id: 'test-pad-0',
   name: 'Test Pad',
   roadWidth: 30,
-  medals: medalsFor(15.25),
+  medals: medalsFor(14.9),
   course: [
     ['start'],
     ['straight', 100],
@@ -462,8 +463,7 @@ const SLIPSTREAM = buildTrack({
   id: 'long-ribbon-1',
   name: 'Slipstream',
   roadWidth: 20,
-  // estimates from the layout, not driven times — retune once there are laps
-  medals: medalsFor(26.62),
+  medals: medalsFor(26.65),
   course: [
     ['start'],
     ['straight', 90], // long launch
@@ -507,8 +507,7 @@ const QIDDIYA_RUSH = buildTrack({
   id: 'qiddiya-rush-2',
   name: 'Qiddiya Rush',
   roadWidth: 20,
-  // estimates from the layout, not driven times — retune once there are laps
-  medals: medalsFor(23.57),
+  medals: medalsFor(23.1),
   course: [
     ['start'],
     ['straight', 80], // long run-up, flat out
@@ -546,7 +545,7 @@ const FREEFALL = buildTrack({
   id: 'freefall-3',
   name: 'Freefall',
   roadWidth: 22, // wide — you land where you land
-  medals: medalsFor(63.87),
+  medals: medalsFor(59.7),
   course: [
     ['start'],
     ['straight', 130], // get everything you can before the first launch
@@ -607,7 +606,7 @@ const STUNT_PARK = buildTrack({
   id: 'stunt-park-4',
   name: 'Stunt Park',
   roadWidth: 20,
-  medals: medalsFor(57.4), // 58.17 / 56.58 measured; jumps make it vary
+  medals: medalsFor(56.9), // 56.8 / 57.07 / 59.35 measured; jumps make it vary
   course: [
     ['start'],
     ['straight', 130],

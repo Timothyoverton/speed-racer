@@ -12,11 +12,11 @@ const TOUCH_KEY = 'speed-racer:touch-mode'
 // All track ids, and the autopilot reference lap each was tuned against
 // (seconds). Used to sanity-band a driven lap.
 export const TRACKS = [
-  { id: 'test-pad-0', refSec: 15.25 },
-  { id: 'long-ribbon-1', refSec: 26.62 },
-  { id: 'qiddiya-rush-2', refSec: 23.57 },
-  { id: 'freefall-3', refSec: 63.87 },
-  { id: 'stunt-park-4', refSec: 57.4 },
+  { id: 'test-pad-0', refSec: 14.9 },
+  { id: 'long-ribbon-1', refSec: 26.65 },
+  { id: 'qiddiya-rush-2', refSec: 23.1 },
+  { id: 'freefall-3', refSec: 59.7 },
+  { id: 'stunt-park-4', refSec: 56.9 },
   { id: 'mission-impossible-5', refSec: 50 },
 ]
 
@@ -119,11 +119,18 @@ export async function autopilotToFinish(page, { timeoutMs = 200_000 } = {}) {
     )
     finished = true
   } finally {
-    await page.evaluate(() => {
-      window.__AP._stop = true
-      const i = window.__input
-      if (i) i.forward = i.back = i.left = i.right = false
-    })
+    // Best-effort: by here the page may have torn down to the menu (a set-piece
+    // respawn-out) and lost window.__AP, and the context may be closing.
+    await page
+      .evaluate(() => {
+        if (window.__AP) window.__AP._stop = true
+        const i = window.__input
+        if (i) {
+          i.forward = i.back = i.left = i.right = false
+          i.axis = null // autopilot steers via the analog axis; hand control back
+        }
+      })
+      .catch(() => {})
   }
   return finished
 }

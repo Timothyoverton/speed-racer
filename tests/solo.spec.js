@@ -18,11 +18,11 @@ import {
 // to end. If a geometry change makes a ramp impassable or a wall un-dodgeable,
 // the autopilot never reaches the finish and this fails.
 const FLOWING = ['test-pad-0', 'long-ribbon-1', 'qiddiya-rush-2', 'freefall-3']
-// The set-piece tracks have big gaps that need frame-perfect entry speed the
-// real loop can't hold at sub-60fps — the autopilot completes them only
-// sometimes. Full-completion checks for these belong in the offline harness;
-// here they get a "loads and the opening is drivable" smoke test instead.
-const SET_PIECE = ['stunt-park-4', 'mission-impossible-5']
+// Stunt Park has big gaps that need frame-perfect entry speed the real loop
+// can't hold at sub-60fps — the autopilot completes it only sometimes. Full
+// completion is the offline harness's job; here it gets a "loads and the
+// opening is drivable" smoke test.
+const SET_PIECE = ['stunt-park-4']
 
 for (const id of FLOWING) {
   const refSec = TRACKS.find((t) => t.id === id).refSec
@@ -42,6 +42,22 @@ for (const id of FLOWING) {
     expect(lapSec).toBeLessThan(refSec * 3.2)
   })
 }
+
+// Mission Impossible: the autopilot's followed line is bent around the slalom
+// blocks in tools/autopilot.js install() (a racing line, not the raw
+// centreline), and a respawn re-acquires the cursor. Together that's enough to
+// thread the slalom cleanly and grind through every gap to the finish — slow
+// (it still respawns at the jumps it can't hit at speed), so no time band, but
+// it must reach all three checkpoints and the finish.
+test('autopilot threads mission-impossible-5 to the finish', async ({ page }) => {
+  await startSolo(page, 'mission-impossible-5')
+  await injectAutopilot(page)
+
+  const finished = await autopilotToFinish(page, { timeoutMs: 220_000 })
+  expect(finished, 'autopilot reached the finish').toBe(true)
+  await expect(page.locator('.result-time')).toBeVisible()
+  expect((await readHud(page)).checkpoints, 'passed all three checkpoints').toBeGreaterThanOrEqual(3)
+})
 
 for (const id of SET_PIECE) {
   test(`${id} loads and the opening section is drivable`, async ({ page }) => {

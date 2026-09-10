@@ -33,9 +33,10 @@ npm run test:e2e       # Playwright e2e (headed on DISPLAY=:0) — see tests/REA
 - Two ways to drive the car without hands: `tools/autopilot.js` for
   deterministic offline measurement (fixed 60Hz `st.advance()` loop — exact lap
   times, jump ballistics), and the Playwright suite in `tests/` for the real
-  loop (held-key input, fps, live 2-player, regression). The set-piece tracks
-  (Stunt Park, Mission Impossible) only complete reliably in the offline
-  harness.
+  loop (held-key input, fps, live 2-player, regression). `install()` bends the
+  followed line around Mission Impossible's slalom blocks (a racing line, not
+  the raw centreline) — that plus a respawn cursor re-acquire gets the real
+  loop through MI5. Stunt Park still only completes in the offline harness.
 
 ## Game Dev — Verify Before Declaring Done
 

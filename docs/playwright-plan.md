@@ -10,14 +10,17 @@ machine, headed on his real display so he can watch. Not CI.
 
 ## What changed from the plan during implementation
 
-- **The set-piece tracks don't complete under the real loop.** Stunt Park and
-  Mission Impossible need frame-perfect entry speed at their gaps; at the
-  sub-60fps the headed browser runs, the autopilot wedges (Stunt Park always,
-  Mission Impossible ~half the time). `solo.spec.js` runs the full
-  drive-to-finish check on the 4 flowing tracks only; the set-piece tracks get
-  a "loads + opening section drivable" smoke check. Deterministic completion for
-  those stays with the offline `tools/autopilot.js` harness — as this doc
-  already said it should.
+- **Set-piece tracks under the real loop.** Their gaps need frame-perfect entry
+  speed the sub-60fps headed browser can't hold. The *slalom* on Mission
+  Impossible was a separate problem — the autopilot drove the raw centreline
+  straight into the blocks — now fixed: `autopilot.js` `install()` bends the
+  followed line around each wall block (a racing line), and `control()`
+  re-acquires the cursor after a respawn. MI5 now threads the slalom cleanly and
+  grinds through the gaps to the finish (respawning at the ones it can't hit at
+  speed), so `solo.spec.js` runs the full drive-to-finish + all-checkpoints
+  check on it. **Stunt Park** still wedges and stays a "loads + opening section
+  drivable" smoke check; deterministic completion for it is the offline
+  `tools/autopilot.js` harness's job.
 - `tools/autopilot.js` is injected as a **classic script** with `export`
   stripped (it's an ES module), so `window.__AP` is set synchronously.
 - Autopilot in Playwright never calls `AP.begin()`/`AP.end()` — those are the
