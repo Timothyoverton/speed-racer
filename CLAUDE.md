@@ -18,6 +18,7 @@ npm run lint           # oxlint
 npm run build
 npm run deploy         # build + push dist/ to gh-pages
 npm run party:deploy   # deploy the PartyKit relay
+npm run test:e2e       # Playwright e2e (headed on DISPLAY=:0) — see tests/README.md
 ```
 
 ## Conventions
@@ -29,6 +30,12 @@ npm run party:deploy   # deploy the PartyKit relay
   tracks reloads the page.
 - Medal times are derived from a measured reference lap, not hand-written — see
   `medalsFor` / `medalsFromAuthor` in `src/game/track.js`.
+- Two ways to drive the car without hands: `tools/autopilot.js` for
+  deterministic offline measurement (fixed 60Hz `st.advance()` loop — exact lap
+  times, jump ballistics), and the Playwright suite in `tests/` for the real
+  loop (held-key input, fps, live 2-player, regression). The set-piece tracks
+  (Stunt Park, Mission Impossible) only complete reliably in the offline
+  harness.
 
 ## Game Dev — Verify Before Declaring Done
 

@@ -1,9 +1,29 @@
 # Playwright test harness — implementation plan
 
-Status: **planned, not started.** Goal: overcome the Browser-pane testing limits
-(rAF throttled to ~4 fps, only one tab renders, held keys don't work, pane
-wedges). Runs locally on Tim's machine, headed on his real display so he can
-watch. Not CI.
+Status: **implemented** (2026-09-11). Lives in `tests/` — see
+[`../tests/README.md`](../tests/README.md) for how to run it and what each spec
+covers. This file is kept for the design rationale below.
+
+Goal: overcome the Browser-pane testing limits (rAF throttled to ~4 fps, only
+one tab renders, held keys don't work, pane wedges). Runs locally on Tim's
+machine, headed on his real display so he can watch. Not CI.
+
+## What changed from the plan during implementation
+
+- **The set-piece tracks don't complete under the real loop.** Stunt Park and
+  Mission Impossible need frame-perfect entry speed at their gaps; at the
+  sub-60fps the headed browser runs, the autopilot wedges (Stunt Park always,
+  Mission Impossible ~half the time). `solo.spec.js` runs the full
+  drive-to-finish check on the 4 flowing tracks only; the set-piece tracks get
+  a "loads + opening section drivable" smoke check. Deterministic completion for
+  those stays with the offline `tools/autopilot.js` harness — as this doc
+  already said it should.
+- `tools/autopilot.js` is injected as a **classic script** with `export`
+  stripped (it's an ES module), so `window.__AP` is set synchronously.
+- Autopilot in Playwright never calls `AP.begin()`/`AP.end()` — those are the
+  offline `frameloop:'never'` path. The helper calls `AP.control()` once per
+  animation frame and lets the real loop run.
+- `tilt.spec.js` drives the gyro via CDP `DeviceOrientation.setDeviceOrientationOverride`.
 
 ## Decisions already made
 
