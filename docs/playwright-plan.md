@@ -42,8 +42,11 @@ machine, headed on his real display so he can watch. Not CI.
 - **Multiplayer tests hit the DEPLOYED relay** `speed-racer.timothyoverton.partykit.dev`
   — always up, free-tier quota is a non-issue, and it sidesteps the
   background-process SIGTERM problem that keeps killing local `partykit dev`.
-  (If we ever need the local relay, start it inside global-setup and tear down
-  in global-teardown, all one foreground process.)
+  A DEV build hard-wires the client to `127.0.0.1:1999` (net-config.js), so
+  `multiplayer.spec.js` spawns its **own** Vite server (port 5273) in
+  `beforeAll` with `VITE_PARTYKIT_HOST` set to the deployed relay, and
+  `test.use({ baseURL })` points that one spec at it. The shared 5173 server is
+  untouched.
 
 ## Keep the fixed-step harness too
 
