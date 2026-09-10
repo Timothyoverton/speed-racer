@@ -8,7 +8,8 @@
 // Put that host here (or set VITE_PARTYKIT_HOST at build time) and redeploy the
 // site. Until then, "Race a friend" will fail to connect in production only.
 
-const FALLBACK_PROD_HOST = 'speed-racer.CHANGE-ME.partykit.dev'
+// Deployed with `npm run party:deploy` (PartyKit account: Timothyoverton).
+const FALLBACK_PROD_HOST = 'speed-racer.timothyoverton.partykit.dev'
 
 export const PARTYKIT_HOST =
   import.meta.env.VITE_PARTYKIT_HOST ||
