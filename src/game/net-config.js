@@ -9,11 +9,11 @@
 // site. Until then, "Race a friend" will fail to connect in production only.
 
 // Deployed with `npm run party:deploy` (PartyKit account: Timothyoverton).
-const FALLBACK_PROD_HOST = 'speed-racer.timothyoverton.partykit.dev'
+const PROD_HOST = 'speed-racer.timothyoverton.partykit.dev'
 
 export const PARTYKIT_HOST =
   import.meta.env.VITE_PARTYKIT_HOST ||
-  (import.meta.env.DEV ? '127.0.0.1:1999' : FALLBACK_PROD_HOST)
+  (import.meta.env.DEV ? '127.0.0.1:1999' : PROD_HOST)
 
-export const PARTYKIT_CONFIGURED =
-  import.meta.env.DEV || PARTYKIT_HOST !== FALLBACK_PROD_HOST
+// false only if the relay host was never filled in
+export const PARTYKIT_CONFIGURED = !PARTYKIT_HOST.includes('CHANGE-ME')
