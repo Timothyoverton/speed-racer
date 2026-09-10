@@ -406,3 +406,8 @@ function norm(q) {
   const l = Math.hypot(q[0], q[1], q[2], q[3]) || 1
   return [q[0] / l, q[1] / l, q[2] / l, q[3] / l]
 }
+
+// dev-only handle for driving the multiplayer flow from the console
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  window.__net = { netState, session, sampleOpponent, sendTelemetry, connect, disconnect }
+}
