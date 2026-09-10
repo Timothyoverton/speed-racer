@@ -55,6 +55,40 @@ _(after the repo + GitHub Pages are set up — see Deploy)_
    saved as a **ghost**; the next run it drives beside you and the HUD shows
    whether you're ahead (green) or behind (red) it.
 
+## Race a friend (two devices)
+
+**Race a friend** on the menu opens a lobby with a join code and a QR. The other
+player scans it (or opens the link) on their own phone / laptop and lands in the
+same lobby. Both hit ready, a shared countdown fires, and you drive the same
+track at the same time — the opponent's car is there on the road with you, and a
+gap readout shows who's ahead. Winner is whoever posts the lower lap time.
+
+It's still each client running its own physics: the server is a dumb relay
+(`party/server.ts`), the result is each player's own local lap time exactly as
+in single player, and there's no shared collision — the opponent car is a
+visual driven by their telemetry, interpolated ~110 ms in the past. See
+`src/game/net.js`.
+
+### Running the relay
+
+Local dev — two terminals:
+
+```bash
+npm run dev          # the game
+npm run party:dev    # the relay on 127.0.0.1:1999 (client finds it automatically)
+```
+
+Production — deploy the relay once (needs a free PartyKit account, `npx partykit login`):
+
+```bash
+npm run party:deploy
+```
+
+It prints a host like `speed-racer.<your-username>.partykit.dev`. Put that in
+`src/game/net-config.js` (or set `VITE_PARTYKIT_HOST` at build time) and
+`npm run deploy` the site. Until then, "Race a friend" works on localhost only —
+the lobby shows a warning banner in production.
+
 ## Local Development
 
 ```bash
@@ -287,6 +321,10 @@ wall-clock duration of your loop, not the lap.
   function re-simulate the inputs server-side to verify the time before it's
   accepted (anti-cheat). Tim to create the Cosmos account + Function App on his
   Azure sub; the function code + client live in this repo.
+- **Two-player racing — done** (`party/server.ts`, `src/game/net.js`). PartyKit
+  relay, room-code + QR lobby, synced countdown, live opponent car, head-to-head
+  result. The relay could later grow the Phase 2 leaderboard endpoint so there's
+  one backend instead of two.
 - **Phase 3** — more tracks, track-of-the-day (shared seed), maybe a block editor.
 
 ### Environment gotchas (from `maze-car`)
