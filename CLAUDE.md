@@ -29,3 +29,11 @@ npm run party:deploy   # deploy the PartyKit relay
   tracks reloads the page.
 - Medal times are derived from a measured reference lap, not hand-written — see
   `medalsFor` / `medalsFromAuthor` in `src/game/track.js`.
+
+## Game Dev — Verify Before Declaring Done
+
+For any change to the racing game's physics, collision, or geometry (e.g.
+ramps, walls, terrain steps), do not report success until you have driven the
+change in the browser preview and confirmed the behaviour visually. State
+explicitly what you observed. Visual distinctness (color/texture) and
+functional behaviour are separate requirements — confirm both.
