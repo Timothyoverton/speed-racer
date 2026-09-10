@@ -18,6 +18,7 @@ const DEAD_DEG = 2.5 // ignore this much, so a steady hand tracks straight
 export const tilt = {
   supported: typeof window !== 'undefined' && 'DeviceOrientationEvent' in window,
   active: false,
+  calibrated: false, // has a baseline been captured since enableTilt()
   permission: 'unknown', // 'unknown' | 'granted' | 'denied' | 'unsupported'
   raw: 0, // the chosen axis, degrees
   zero: 0, // captured baseline
@@ -73,6 +74,7 @@ function onOrientation(e) {
 export function calibrateTilt() {
   tilt.zero = tilt.raw
   tilt.steer = 0
+  tilt.calibrated = true
   input.axis = 0
 }
 
@@ -96,6 +98,7 @@ export async function enableTilt() {
   }
   if (!tilt.active) {
     sawReading = false
+    tilt.calibrated = false
     window.addEventListener('deviceorientation', onOrientation)
     tilt.active = true
   }
@@ -114,5 +117,10 @@ export async function enableTilt() {
 export function disableTilt() {
   if (tilt.active) window.removeEventListener('deviceorientation', onOrientation)
   tilt.active = false
+  tilt.calibrated = false
   input.axis = null
 }
+
+// dev-only handle, same as __car / __input / __hud — lets the Playwright tilt
+// spec wait for calibration deterministically instead of racing the 600ms timer
+if (import.meta.env.DEV && typeof window !== 'undefined') window.__tilt = tilt
