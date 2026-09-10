@@ -17,17 +17,46 @@ export default function Lobby() {
   const code = net.session.roomCode
   const url = code ? net.joinUrl(code, TRACK.id) : ''
 
+  function flashCopied() {
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   function copyLink() {
+    // navigator.clipboard fails silently on some browsers / non-focused tabs;
+    // fall back to the old execCommand path, and if even that fails select the
+    // text so it can be copied by hand.
+    const done = () => flashCopied()
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(done, () => legacyCopy(url, done))
+    } else {
+      legacyCopy(url, done)
+    }
+  }
+
+  function legacyCopy(text, ok) {
     try {
-      navigator.clipboard?.writeText(url).then(
-        () => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
-        },
-        () => {},
-      )
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const worked = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (worked) ok()
+      else selectUrlField()
     } catch {
-      /* clipboard unavailable */
+      selectUrlField()
+    }
+  }
+
+  function selectUrlField() {
+    const el = document.getElementById('mp-url-field')
+    if (el) {
+      el.focus()
+      el.select()
     }
   }
 
@@ -93,6 +122,19 @@ export default function Lobby() {
             </button>
           </div>
           {qr && <img className="mp-qr" src={qr} alt="Scan to join" width={140} height={140} />}
+        </div>
+
+        <input
+          id="mp-url-field"
+          className="mp-url"
+          readOnly
+          value={url}
+          onFocus={(e) => e.target.select()}
+          onClick={(e) => e.target.select()}
+        />
+        <div className="mp-hint">
+          Same device? Open this link in a second tab or window. Different device?
+          Scan the QR.
         </div>
 
         <div className="mp-players">
