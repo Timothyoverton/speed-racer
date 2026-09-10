@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
-import { Environment, Lightformer } from '@react-three/drei'
+import { Environment, Lightformer, PerformanceMonitor, AdaptiveDpr } from '@react-three/drei'
 import * as THREE from 'three'
 import Race from './Race.jsx'
 import Scenery from './Scenery.jsx'
@@ -39,11 +39,16 @@ function SunFollow({ lightRef }) {
 export default function Scene() {
   const runId = useRunId()
   const sun = useRef(null)
+  // pixel-ratio ceiling, dropped automatically when the frame rate sags (two
+  // game instances on one GPU, a weak phone, a heavy launch). 1.5 is the normal
+  // cap — a retina panel at full dpr renders ~1.8x the pixels for no visible
+  // gain on this low-poly art.
+  const [dprMax, setDprMax] = useState(1.5)
 
   return (
     <Canvas
-      shadows="soft"
-      dpr={[1, 2]}
+      shadows
+      dpr={[1, dprMax]}
       camera={{ fov: 62, near: 0.3, far: 2600, position: [0, 8, -14] }}
       onCreated={(s) => {
         if (import.meta.env.DEV) window.__three = s
@@ -55,6 +60,13 @@ export default function Scene() {
         toneMappingExposure: 1.04,
       }}
     >
+      <PerformanceMonitor
+        onDecline={() => setDprMax(1)}
+        onIncline={() => setDprMax(1.5)}
+        flipflops={3}
+        onFallback={() => setDprMax(0.75)}
+      />
+      <AdaptiveDpr pixelated />
       <color attach="background" args={['#cddff0']} />
       {/* Haze tinted to the sky at the horizon, so distance reads as depth
           rather than everything fading to white. Starts further out than it
@@ -124,7 +136,7 @@ export default function Scene() {
         target-position={[cx, 0, cz]}
         intensity={2.6}
         color="#fff2dc"
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-shadowSpan}
         shadow-camera-right={shadowSpan}
         shadow-camera-top={shadowSpan}
