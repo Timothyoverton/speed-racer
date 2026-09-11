@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { TRACK } from '../game/track.js'
+import { TRACK, TRACKS } from '../game/track.js'
 import * as net from '../game/net.js'
-import { leaveRace } from '../game/mp.js'
+import { leaveRace, changeTrack } from '../game/mp.js'
 import { PARTYKIT_CONFIGURED } from '../game/net-config.js'
 import { getName, setName } from '../game/leaderboard.js'
 
@@ -114,6 +114,18 @@ export default function Lobby() {
       <div className="panel">
         <div className="title">RACE A FRIEND</div>
         <div className="subtitle">{TRACK.name}</div>
+
+        <div className="tracks">
+          {TRACKS.map((t) => (
+            <button
+              key={t.id}
+              className={'track' + (t.id === TRACK.id ? ' active' : '')}
+              onClick={() => !starting && t.id !== TRACK.id && changeTrack(t.id)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
 
         {!PARTYKIT_CONFIGURED && (
           <div className="mp-warn">

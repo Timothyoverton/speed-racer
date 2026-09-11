@@ -268,6 +268,11 @@ function handle(msg) {
       buffer = []
       emit('rematch')
       break
+
+    case 'trackChanged':
+      session.track = msg.track
+      emit('trackChanged', msg.track)
+      break
   }
 }
 
@@ -287,6 +292,14 @@ export function sendReady(ready) {
 
 export function sendRematch() {
   send({ type: 'rematch' })
+}
+
+// Propose a new track for the room. Every client, including this one, reacts
+// to the server's 'trackChanged' echo the same way (see mp.js) rather than
+// switching locally first — that keeps both players' reload-and-rejoin in
+// lockstep instead of racing each other.
+export function sendChangeTrack(trackId) {
+  send({ type: 'changeTrack', track: trackId })
 }
 
 // Called every physics frame; self-throttles to TELEM_HZ.

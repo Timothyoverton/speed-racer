@@ -8,6 +8,7 @@ import * as net from './net.js'
 import { TRACK, TRACKS } from './track.js'
 import { getName } from './leaderboard.js'
 import { getCarColour, CAR_COLOURS, setCarColourId } from './carColour.js'
+import { recordOpponent } from './recentOpponents.js'
 import {
   enterLobby,
   toMenu,
@@ -100,6 +101,24 @@ function joinAsGuest(code) {
   enterLobby()
 }
 
+// Menu.jsx's "Recently raced" rejoin button. Same as following a friend's
+// link, minus the link — if that room is still alive we land back in it, if
+// it's gone we just get a fresh, currently-empty room under that old code
+// (Lobby's normal "waiting for a friend" state), which is a harmless outcome
+// either way.
+export function rejoinRoom(code) {
+  joinAsGuest(code)
+}
+
+// Propose (or follow) a track change without leaving the room. Called both
+// from the Lobby's track picker (the proposer) and from the trackChanged
+// listener below (everyone, proposer included, once the server echoes it
+// back) — see net.js sendChangeTrack for why it's routed through the server
+// instead of switching locally first.
+export function changeTrack(trackId) {
+  net.sendChangeTrack(trackId)
+}
+
 export function leaveRace() {
   net.disconnect()
   robotRace.active = false
@@ -121,10 +140,34 @@ function dedupeColour(roster) {
   }
 }
 
+// A real (non-robot) friend showed up — remember them for the menu's
+// "Recently raced" rejoin list.
+function noteRealOpponent(roster) {
+  if (robotRace.active) return
+  const them = roster.find((p) => p.id !== net.session.selfId)
+  if (them && net.session.roomCode) recordOpponent(them.name, net.session.roomCode)
+}
+
 export function useMultiplayerCoordinator() {
   useEffect(() => {
     const offs = [
       net.on('roster', dedupeColour),
+      net.on('roster', noteRealOpponent),
+      net.on('trackChanged', (trackId) => {
+        // No-op if we're already there (e.g. the room's stored track just
+        // matched on join) — otherwise stash the room code and reload onto
+        // it, same trick bootstrapMultiplayer() uses for a join link that
+        // names a different track. Reloading is how a new track's geometry
+        // actually gets loaded (see track.js's own switching convention).
+        if (!TRACKS.some((t) => t.id === trackId) || trackId === TRACK.id) return
+        try {
+          sessionStorage.setItem(RESUME_KEY, JSON.stringify({ code: net.session.roomCode }))
+          localStorage.setItem(TRACK_KEY, trackId)
+        } catch {
+          /* ignore */
+        }
+        window.location.reload()
+      }),
       net.on('start', () => {
         // only react if we're still sitting in the lobby (or a stale race)
         if (getState().phase === 'lobby' || getState().phase === 'finished') {

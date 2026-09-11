@@ -8,7 +8,8 @@ import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.j
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
 import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
-import { hostRace, robotRace } from '../game/mp.js'
+import { hostRace, robotRace, rejoinRoom } from '../game/mp.js'
+import { recentOpponents } from '../game/recentOpponents.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
@@ -17,6 +18,7 @@ export default function Menu() {
   const [colour, setColour] = useState(getCarColourId)
   const [ctrl, setCtrl] = useState(touchModeSetting)
   const [music, setMusic] = useState(isMusicEnabled)
+  const [recent] = useState(recentOpponents)
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
   const fastest = bestTopSpeed(TRACK.id)
@@ -43,6 +45,13 @@ export default function Menu() {
   // synced countdown, same live opponent car, same result screen — the robot
   // just looks like a friend who's very fast on the join. Not available on
   // the deployed build: there's no server to spawn a browser on.
+  function rejoin(code) {
+    setName(name.trim())
+    initAudio()
+    if (touchControlsActive()) enableTilt()
+    rejoinRoom(code)
+  }
+
   function raceRobot() {
     setName(name.trim())
     initAudio()
@@ -173,6 +182,20 @@ export default function Menu() {
           <button className="ghost" onClick={raceRobot}>
             🤖 Race a robot
           </button>
+        )}
+
+        {recent.length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            <div className="subtitle" style={{ marginBottom: 4 }}>Recently raced</div>
+            {recent.map((o) => (
+              <div className="row" key={o.name + o.code}>
+                <span className="label">{o.name}</span>
+                <button className="ghost" style={{ padding: '4px 10px' }} onClick={() => rejoin(o.code)}>
+                  Rejoin
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
         <div className="hint">

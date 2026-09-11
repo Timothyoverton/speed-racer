@@ -34,6 +34,7 @@ type In =
   | { type: 'telem'; t: number; p: [number, number, number]; q: [number, number, number, number]; s: number; prog: number; air: boolean }
   | { type: 'finish'; timeMs: number; topKmh: number }
   | { type: 'rematch' }
+  | { type: 'changeTrack'; track: string }
 
 // server -> client
 type Out =
@@ -46,6 +47,7 @@ type Out =
   | { type: 'oppFinish'; timeMs: number; topKmh: number; name: string }
   | { type: 'oppLeft' }
   | { type: 'rematch' }
+  | { type: 'trackChanged'; track: string }
 
 interface RosterEntry {
   id: string
@@ -156,6 +158,15 @@ export default class RaceServer implements Party.Server {
         }
         this.room.broadcast(JSON.stringify({ type: 'rematch' } satisfies Out))
         this.broadcastRoster()
+        break
+      }
+      case 'changeTrack': {
+        // Either player can propose a track; the whole room follows. Each
+        // client reloads onto the new track and rejoins this same room code
+        // (see mp.js), so there's nothing else to reconcile here beyond
+        // remembering which track is now authoritative for the next 'hello'.
+        this.track = String(msg.track || '').slice(0, 64)
+        this.room.broadcast(JSON.stringify({ type: 'trackChanged', track: this.track } satisfies Out))
         break
       }
     }
