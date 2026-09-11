@@ -37,6 +37,22 @@ export default function Menu() {
     hostRace()
   }
 
+  // Dev-only: host a room like "Race a friend", then ask the vite dev server
+  // (tools/robot-player.js via the robot-spawner middleware) to launch an
+  // autopilot-driven browser that joins it as the guest. Same lobby, same
+  // synced countdown, same live opponent car, same result screen — the robot
+  // just looks like a friend who's very fast on the join. Not available on
+  // the deployed build: there's no server to spawn a browser on.
+  function raceRobot() {
+    setName(name.trim())
+    initAudio()
+    if (touchControlsActive()) enableTilt()
+    const code = hostRace()
+    fetch(`/__robot/join?room=${encodeURIComponent(code)}&track=${encodeURIComponent(TRACK.id)}`).catch(() => {
+      /* dev-only endpoint; if it's missing there's nothing more to do here */
+    })
+  }
+
   return (
     <div className="overlay">
       <div className="panel">
@@ -152,6 +168,11 @@ export default function Menu() {
         <button className="ghost" onClick={raceFriend}>
           🏁 Race a friend
         </button>
+        {import.meta.env.DEV && (
+          <button className="ghost" onClick={raceRobot}>
+            🤖 Race a robot
+          </button>
+        )}
 
         <div className="hint">
           <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />

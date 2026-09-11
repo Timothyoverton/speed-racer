@@ -31,3 +31,4 @@ dist-ssr
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+.robot-player.log
