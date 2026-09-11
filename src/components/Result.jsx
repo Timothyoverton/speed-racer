@@ -4,7 +4,7 @@ import { useResult, startCountdown, toMenu, getState } from '../game/store.js'
 import { topTimes } from '../game/leaderboard.js'
 import { formatTime, formatDelta, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import * as net from '../game/net.js'
-import { leaveRace } from '../game/mp.js'
+import { leaveRace, robotRace } from '../game/mp.js'
 
 export default function Result() {
   const result = useResult()
@@ -68,9 +68,11 @@ function MultiplayerResult({ result }) {
           </div>
         )}
 
-        <button className="cta" onClick={() => net.sendRematch()}>
-          REMATCH
-        </button>
+        {!robotRace.active && (
+          <button className="cta" onClick={() => net.sendRematch()}>
+            REMATCH
+          </button>
+        )}
         <button className="ghost" onClick={leaveRace}>
           Back to menu
         </button>
