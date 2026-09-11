@@ -8,7 +8,6 @@ import { resetCarState } from '../game/carState.js'
 import { TRACK, CHECKPOINT_COUNT } from '../game/track.js'
 import { finishRace, getState } from '../game/store.js'
 import * as net from '../game/net.js'
-import { robotRace } from '../game/mp.js'
 import { resetProgress } from '../game/progress.js'
 import { resetHud, hud } from '../game/hud.js'
 import { resetTimer, stopTimer } from '../game/timing.js'
@@ -53,7 +52,7 @@ export default function Race() {
   return (
     <>
       <Track onFinish={onFinish} />
-      {!robotRace.active && <Ghost />}
+      {!mp && <Ghost />}
       {mp && <RemoteCar />}
       <Car recorder={recorder} />
       <Effects />
