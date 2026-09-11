@@ -66,7 +66,16 @@ export function bootstrapMultiplayer() {
   return true
 }
 
+// Set true by Menu.jsx right after hostRace() when the room was opened via
+// "Race a robot" (not a plain "Race a friend"). Race.jsx reads it to skip the
+// self-ghost — with a live robot opponent already on track, the ghost is just
+// visual clutter, not a second thing to race. Per-browser-session state, so
+// it only affects what the host who clicked "Race a robot" sees; a real
+// friend joining that room still sees their own ghost as normal.
+export const robotRace = { active: false }
+
 export function hostRace() {
+  robotRace.active = false
   const code = net.newRoomCode()
   net.connect({
     roomCode: code,
@@ -80,6 +89,7 @@ export function hostRace() {
 }
 
 function joinAsGuest(code) {
+  robotRace.active = false
   net.connect({
     roomCode: code,
     name: getName() || 'Racer',
@@ -92,6 +102,7 @@ function joinAsGuest(code) {
 
 export function leaveRace() {
   net.disconnect()
+  robotRace.active = false
   toMenu()
 }
 

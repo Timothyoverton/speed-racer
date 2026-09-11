@@ -8,7 +8,7 @@ import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.j
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
 import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
-import { hostRace } from '../game/mp.js'
+import { hostRace, robotRace } from '../game/mp.js'
 
 const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 
@@ -48,6 +48,7 @@ export default function Menu() {
     initAudio()
     if (touchControlsActive()) enableTilt()
     const code = hostRace()
+    robotRace.active = true
     fetch(`/__robot/join?room=${encodeURIComponent(code)}&track=${encodeURIComponent(TRACK.id)}`).catch(() => {
       /* dev-only endpoint; if it's missing there's nothing more to do here */
     })
