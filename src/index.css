@@ -595,7 +595,7 @@ body.touch-mode .hud .timer {
 
 /* BOOST sits straight above GO, tucked a little behind it — same thumb, a short reach up. */
 .touch .nosbtn {
-  right: 44px;
+  right: 30px; /* 15% of its width further out than centred over GO */
   bottom: 142px; /* tucks ~15% behind GO (top edge at 156px) */
   width: 92px;
   height: 92px;
