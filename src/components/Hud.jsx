@@ -21,7 +21,7 @@ export default function Hud() {
   const boostRef = useRef(null)
   const boostNumRef = useRef(null)
   const oppRef = useRef(null)
-  const nosRefs = useRef([])
+  const nosBarRef = useRef(null)
   const boostKeyRef = useRef(null)
   const nosTxtRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
@@ -59,14 +59,10 @@ export default function Hud() {
         boostRef.current.style.opacity = on ? '1' : '0'
         if (on) boostNumRef.current.textContent = hud.boost.toFixed(1) + 's'
       }
-      // NOS pips: lit = a charge in hand, the next one fills as it recharges
-      for (let i = 0; i < NOS_CHARGES; i++) {
-        const el = nosRefs.current[i]
-        if (!el) continue
-        const have = i < hud.nosCharges
-        const charging = i === hud.nosCharges
-        el.className = 'pip' + (have ? ' on' : '')
-        el.firstChild.style.transform = `scaleX(${charging ? hud.nosRefill.toFixed(3) : have ? 1 : 0})`
+      // one bar: each charge is a third, and the next third fills as it recharges
+      if (nosBarRef.current) {
+        const charging = hud.nosCharges < NOS_CHARGES ? hud.nosRefill : 0
+        nosBarRef.current.style.transform = `scaleX(${((hud.nosCharges + charging) / NOS_CHARGES).toFixed(3)})`
       }
       if (nosTxtRef.current) {
         // plain "BOOST"; once a charge is spent, the seconds until the next one
@@ -125,9 +121,7 @@ export default function Hud() {
       <div className="speed">
         <div className="nos" title="Boost (Space)">
           <span ref={nosTxtRef}>BOOST</span>
-          {Array.from({ length: NOS_CHARGES }, (_, i) => (
-            <i key={i} className="pip" ref={(el) => (nosRefs.current[i] = el)}><u /></i>
-          ))}
+          <i className="pip"><u ref={nosBarRef} /></i>
         </div>
         <div className="revbar">
           <i ref={revRef} />

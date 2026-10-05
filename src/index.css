@@ -807,7 +807,7 @@ button.ctrlmode.active {
 .hud .nos .pip {
   position: relative;
   display: block;
-  width: 16px;
+  width: 56px; /* one bar, thirds marked by the ticks below */
   height: 8px;
   border-radius: 2px;
   border: 1px solid rgba(127, 251, 255, 0.55);
@@ -820,13 +820,15 @@ button.ctrlmode.active {
   background: #25e6ff;
   transform-origin: left;
   transform: scaleX(0);
-  opacity: 0.45;
-}
-.hud .nos .pip.on u {
-  opacity: 1;
   box-shadow: 0 0 6px #25e6ff;
 }
-body.touch-mode .hud .nos .pip { width: 12px; height: 7px; }
+.hud .nos .pip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent calc(33.3% - 1px), rgba(8, 12, 26, 0.9) calc(33.3% - 1px) 33.3%, transparent 33.3% calc(66.6% - 1px), rgba(8, 12, 26, 0.9) calc(66.6% - 1px) 66.6%, transparent 66.6%);
+}
+body.touch-mode .hud .nos .pip { width: 40px; height: 7px; }
 body.touch-mode .hud .nos span { font-size: 8px; }
 
 /* ---- multiplayer -------------------------------------------------------- */
