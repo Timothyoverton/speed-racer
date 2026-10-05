@@ -69,14 +69,9 @@ export default function Hud() {
         el.firstChild.style.transform = `scaleX(${charging ? hud.nosRefill.toFixed(3) : have ? 1 : 0})`
       }
       if (nosTxtRef.current) {
-        // when is boost available? now (READY) or how long until the next charge
+        // plain "BOOST"; once a charge is spent, the seconds until the next one
         const wait = Math.ceil((1 - hud.nosRefill) * NOS_REFILL_SECS)
-        const txt =
-          hud.nosCharges >= NOS_CHARGES
-            ? 'NOS READY'
-            : hud.nosCharges > 0
-              ? `NOS READY · next +1 in ${wait}s`
-              : `NOS CHARGING · ${wait}s`
+        const txt = hud.nosCharges >= NOS_CHARGES ? 'BOOST' : `BOOST ${wait}s`
         if (nosTxtRef.current.textContent !== txt) nosTxtRef.current.textContent = txt
         nosTxtRef.current.className = hud.nosCharges > 0 ? 'ready' : 'wait'
       }
@@ -128,8 +123,8 @@ export default function Hud() {
       </div>
 
       <div className="speed">
-        <div className="nos" title="NOS (Space)">
-          <span ref={nosTxtRef}>READY</span>
+        <div className="nos" title="Boost (Space)">
+          <span ref={nosTxtRef}>BOOST</span>
           {Array.from({ length: NOS_CHARGES }, (_, i) => (
             <i key={i} className="pip" ref={(el) => (nosRefs.current[i] = el)}><u /></i>
           ))}

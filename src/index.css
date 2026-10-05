@@ -786,30 +786,30 @@ button.ctrlmode.active {
   to { filter: brightness(1.5); }
 }
 
-/* NOS charges, stacked above the rev bar: label says whether boost is ready or
-   how long until the next charge, three pips show charges (the next one fills
-   as it recharges). */
+/* Boost charges, a small right-aligned row above the rev bar: the label (with
+   seconds to the next charge once one is spent) and three small pips. */
 .hud .nos {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
-  margin: 0 0 8px auto;
+  gap: 4px;
+  margin: 0 0 6px auto;
 }
 .hud .nos span {
-  margin-right: 6px;
-  font-size: 12px;
+  margin-right: 4px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
 }
-.hud .nos span.ready { color: #7ffbff; text-shadow: 0 0 10px rgba(37, 230, 255, 0.7); }
+.hud .nos span.ready { color: #7ffbff; text-shadow: 0 0 8px rgba(37, 230, 255, 0.7); }
 .hud .nos span.wait { color: var(--muted); }
 .hud .nos .pip {
   position: relative;
   display: block;
-  width: 38px;
-  height: 12px;
-  border-radius: 3px;
+  width: 16px;
+  height: 8px;
+  border-radius: 2px;
   border: 1px solid rgba(127, 251, 255, 0.55);
   background: rgba(10, 15, 33, 0.6);
   overflow: hidden;
@@ -824,10 +824,10 @@ button.ctrlmode.active {
 }
 .hud .nos .pip.on u {
   opacity: 1;
-  box-shadow: 0 0 10px #25e6ff;
+  box-shadow: 0 0 6px #25e6ff;
 }
-body.touch-mode .hud .nos .pip { width: 22px; height: 9px; }
-body.touch-mode .hud .nos span { font-size: 9px; letter-spacing: 1px; }
+body.touch-mode .hud .nos .pip { width: 12px; height: 7px; }
+body.touch-mode .hud .nos span { font-size: 8px; }
 
 /* ---- multiplayer -------------------------------------------------------- */
 
