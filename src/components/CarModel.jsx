@@ -595,147 +595,6 @@ function buildBlur() {
   return g
 }
 
-function tagFlame(geo, kind, radFill) {
-  const n = geo.attributes.position.count
-  const k = new Float32Array(n)
-  const r = new Float32Array(n)
-  k.fill(kind)
-  if (radFill == null) {
-    const pos = geo.attributes.position
-    let maxR = 0.0001
-    for (let i = 0; i < n; i++) maxR = Math.max(maxR, Math.hypot(pos.getX(i), pos.getY(i)))
-    for (let i = 0; i < n; i++) r[i] = Math.min(1, Math.hypot(pos.getX(i), pos.getY(i)) / maxR)
-  } else {
-    r.fill(radFill)
-  }
-  geo.setAttribute('aKind', new THREE.BufferAttribute(k, 1))
-  geo.setAttribute('aRad', new THREE.BufferAttribute(r, 1))
-  return geo
-}
-
-// Local length is 1. The group scales Z to the live flame length and XY so the
-// base stays seated in the pipe. Apex points down -Z, out of the tail.
-function buildFlameGeometry(phase) {
-  // Short bell: seated in the pipe, a little wider through the middle, a point at the tip.
-  const shellPts = [
-    new THREE.Vector2(0.068, 0),
-    new THREE.Vector2(0.078, 0.14),
-    new THREE.Vector2(0.096, 0.38),
-    new THREE.Vector2(0.09, 0.62),
-    new THREE.Vector2(0.05, 0.84),
-    new THREE.Vector2(0.01, 1),
-  ]
-  const shell = new THREE.LatheGeometry(shellPts, 16)
-  shell.rotateX(-Math.PI / 2)
-  tagFlame(shell, 0, 1)
-
-  const corePts = [
-    new THREE.Vector2(0.034, 0),
-    new THREE.Vector2(0.04, 0.06),
-    new THREE.Vector2(0.03, 0.16),
-    new THREE.Vector2(0.012, 0.28),
-  ]
-  const core = new THREE.LatheGeometry(corePts, 12)
-  core.rotateX(-Math.PI / 2)
-  tagFlame(core, 2, 1)
-
-  // Rings face -Z (out of the tail, toward a chase camera). FrontSide then shows them.
-  const discs = [
-    [0.1, 0.074],
-    [0.26, 0.086],
-    [0.46, 0.072],
-    [0.66, 0.048],
-  ].map(([t, radius]) => {
-    const g = new THREE.CircleGeometry(radius, 20)
-    g.rotateY(Math.PI)
-    g.translate(0, 0, -t)
-    return tagFlame(g, 1, null)
-  })
-
-  const geo = merge([shell, core, ...discs])
-  const n = geo.attributes.position.count
-  const p = new Float32Array(n)
-  p.fill(phase)
-  geo.setAttribute('aPhase', new THREE.BufferAttribute(p, 1))
-  return geo
-}
-
-const FLAME_VERT = /* glsl */ `
-  attribute float aKind;
-  attribute float aRad;
-  attribute float aPhase;
-  uniform float uTime;
-  varying float vT;
-  varying float vKind;
-  varying float vRad;
-  varying float vPhase;
-  varying vec3 vN;
-  varying vec3 vV;
-  void main() {
-    vT = clamp(-position.z, 0.0, 1.0);
-    vKind = aKind;
-    vRad = aRad;
-    vPhase = aPhase;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    vN = normalize(normalMatrix * normal);
-    vV = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
-  }
-`
-
-const FLAME_FRAG = /* glsl */ `
-  uniform float uTime;
-  varying float vT;
-  varying float vKind;
-  varying float vRad;
-  varying float vPhase;
-  varying vec3 vN;
-  varying vec3 vV;
-  void main() {
-    float t = vT;
-    float flick = 0.86 + 0.14 * sin(uTime * 47.0 + vPhase + t * 18.0);
-    flick *= 0.94 + 0.06 * sin(uTime * 29.0 + vPhase * 1.7);
-    float flutter = mix(1.0, flick, smoothstep(0.12, 1.0, t));
-    // Additive and un-tone-mapped. Keep rgb * alpha under 1 on every channel
-    // or the blue core and the orange tip both clip to a white bar.
-    vec3 hot = vec3(0.62, 0.8, 1.0);
-    vec3 blue = vec3(0.1, 0.38, 1.0);
-    vec3 amber = vec3(1.0, 0.42, 0.04);
-    vec3 red = vec3(0.82, 0.06, 0.0);
-
-    if (vKind > 1.5) {
-      float fade = 1.0 - smoothstep(0.0, 0.26, t);
-      float a = fade * 0.72 * flutter;
-      gl_FragColor = vec4(mix(hot, blue, smoothstep(0.0, 0.22, t)), clamp(a, 0.0, 0.8));
-      return;
-    }
-
-    if (vKind > 0.5) {
-      // Shock diamond: a thin ring. A filled disc stacks into a white plug.
-      float ring = exp(-pow((vRad - 0.78) * 10.0, 2.0));
-      vec3 col = mix(hot, blue, smoothstep(0.04, 0.2, t));
-      col = mix(col, amber, smoothstep(0.28, 0.55, t));
-      col = mix(col, red, smoothstep(0.5, 0.78, t));
-      float a = ring * 0.85 * (1.0 - smoothstep(0.2, 0.85, t)) * flutter;
-      gl_FragColor = vec4(col, clamp(a, 0.0, 0.9));
-      return;
-    }
-
-    vec3 col = blue;
-    col = mix(col, amber, smoothstep(0.18, 0.55, t));
-    col = mix(col, red, smoothstep(0.48, 0.92, t));
-    float band = fract(t * 4.5 + 0.08);
-    float diamond = exp(-pow((band - 0.16) * 5.5, 2.0));
-    diamond *= 1.0 - smoothstep(0.05, 0.7, t);
-    col = mix(col, vec3(0.35, 0.62, 1.0), diamond * 0.8);
-    float facing = pow(abs(dot(normalize(vN), normalize(vV))), 0.65);
-    float along = 1.0 - smoothstep(0.2, 1.0, t);
-    float a = along * mix(0.08, 0.28, facing) * flutter;
-    a += diamond * 0.1;
-    gl_FragColor = vec4(col, clamp(a, 0.0, 0.4));
-  }
-`
-
 function useCarGeometry(color) {
   return useMemo(() => {
     const shell = buildShell(color)
@@ -947,26 +806,64 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
   const spin = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const flames = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const flameLevel = useRef(0)
-  const flameGeos = useMemo(() => PIPE_X.map((_, i) => buildFlameGeometry(i * 1.7)), [])
-  const flameMat = useMemo(
+  // One flame per pipe. A single additive cone shaded along its length instead
+  // of stacked flat-coloured cones: white-blue at the nozzle, blue through the
+  // body, burning to orange at the ragged tip, with shock diamonds banded
+  // through the blue (the tell of a real pressurised exhaust).
+  const flameGeo = useMemo(() => {
+    const g = new THREE.ConeGeometry(0.07, 1, 14, 1, true)
+    g.translate(0, 0.5, 0) // base at the origin
+    g.rotateX(-Math.PI / 2) // apex points back along -Z
+    return g
+  }, [])
+  const flameMats = useMemo(
     () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        side: THREE.FrontSide,
-        blending: THREE.AdditiveBlending,
-        toneMapped: false,
-        uniforms: { uTime: { value: 0 } },
-        vertexShader: FLAME_VERT,
-        fragmentShader: FLAME_FRAG,
-      }),
+      [0, 1, 2, 3].map(
+        (i) =>
+          new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+            uniforms: { uTime: { value: 0 }, uPhase: { value: i * 1.7 } },
+            vertexShader: `
+              varying float vT; varying vec3 vN; varying vec3 vV;
+              void main() {
+                vT = clamp(-position.z, 0.0, 1.0);
+                vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                vN = normalize(normalMatrix * normal);
+                vV = normalize(-mv.xyz);
+                gl_Position = projectionMatrix * mv;
+              }`,
+            fragmentShader: `
+              uniform float uTime; uniform float uPhase;
+              varying float vT; varying vec3 vN; varying vec3 vV;
+              void main() {
+                float t = vT;
+                float flick = 0.82 + 0.18 * sin(uTime * 70.0 + uPhase + t * 9.0)
+                                   * sin(uTime * 43.0 + uPhase * 2.0);
+                // colour: hot white-blue -> saturated blue -> orange -> red at the tip
+                vec3 col = mix(vec3(0.85, 0.95, 1.0), vec3(0.18, 0.42, 1.0), smoothstep(0.0, 0.3, t));
+                col = mix(col, vec3(1.0, 0.55, 0.12), smoothstep(0.3, 0.65, t));
+                col = mix(col, vec3(1.0, 0.16, 0.04), smoothstep(0.62, 0.95, t));
+                // shock diamonds: tight bright bands in the first half
+                float d = pow(0.5 + 0.5 * sin(t * 34.0 - 1.2), 5.0) * (1.0 - smoothstep(0.1, 0.65, t));
+                col += vec3(0.5, 0.75, 1.0) * d * 1.2;
+                // soft edges: fade where the cone turns edge-on to the camera
+                float f = pow(abs(dot(normalize(vN), normalize(vV))), 0.7);
+                float a = (1.0 - smoothstep(0.55, 1.0, t)) * (1.0 - 0.35 * t) * f * flick;
+                gl_FragColor = vec4(col * (1.4 + 1.2 * smoothstep(0.4, 0.85, t)), clamp(a, 0.0, 1.0));
+              }`,
+          }),
+      ),
     [],
   )
-  const glowGeo = useMemo(() => new THREE.SphereGeometry(0.075, 12, 8), [])
+  // blue bloom around each pipe mouth
   const glowMat = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        color: '#8eb6ff',
+        color: '#3d8bff',
         transparent: true,
         opacity: 0,
         blending: THREE.AdditiveBlending,
@@ -1027,6 +924,8 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       1 - Math.exp(-8 * dt),
     )
 
+    // fire out of the pipes while the driver boost is lit: lights fast, dies
+    // away a touch slower, and the length breathes so it reads as a flame
     flameLevel.current = THREE.MathUtils.lerp(
       flameLevel.current,
       s.nos ? 1 : 0,
@@ -1034,19 +933,19 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
     )
     const fl01 = flameLevel.current
     const now = performance.now() / 1000
-    flameMat.uniforms.uTime.value = now
     for (let i = 0; i < flames.length; i++) {
       const f = flames[i].current
       if (!f) continue
       f.visible = fl01 > 0.03
-      if (!f.visible) continue
-      const breathe = 0.94 + 0.06 * Math.sin(now * 18 + i * 1.4)
-      const len = Math.max(0.05, fl01 * breathe * 0.4)
-      const w = 0.94 + 0.04 * Math.sin(now * 27 + i * 0.9)
-      f.scale.set(w, w, len)
+      if (f.visible) {
+        flameMats[i].uniforms.uTime.value = now
+        const len = fl01 * (0.95 + Math.random() * 0.4) // metres: short and fierce
+        const w = 0.8 + fl01 * 0.3
+        f.scale.set(w, w, len)
+      }
     }
-    glowMat.opacity = fl01 * 0.07
-    if (flameLight.current) flameLight.current.intensity = fl01 * (0.18 + 0.04 * Math.sin(now * 40))
+    glowMat.opacity = fl01 * (0.5 + Math.random() * 0.12)
+    if (flameLight.current) flameLight.current.intensity = fl01 * (2.2 + Math.random() * 0.8)
 
     mat.blur.opacity = THREE.MathUtils.clamp((s.speed - 12) / 26, 0, 0.55)
   })
@@ -1070,23 +969,19 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
             {live && (
               <>
                 <group ref={flames[i]} position={[x, -0.26, -2.22]} visible={false}>
-                  <mesh geometry={flameGeos[i]} material={flameMat} renderOrder={2} />
+                  <mesh geometry={flameGeo}>
+                    <primitive object={flameMats[i]} attach="material" />
+                  </mesh>
                 </group>
-                <mesh geometry={glowGeo} material={glowMat} position={[x, -0.26, -2.24]} renderOrder={2} />
+                <mesh position={[x, -0.26, -2.24]}>
+                  <sphereGeometry args={[0.2, 12, 8]} />
+                  <primitive object={glowMat} attach="material" />
+                </mesh>
               </>
             )}
           </group>
         ))}
-        {live && (
-          <pointLight
-            ref={flameLight}
-            position={[0, -0.08, -2.55]}
-            color="#b7d4ff"
-            intensity={0}
-            distance={4.2}
-            decay={2}
-          />
-        )}
+        {live && <pointLight ref={flameLight} position={[0, -0.1, -2.7]} color="#4d8dff" intensity={0} distance={7} decay={2} />}
       </group>
 
       <mesh geometry={geo.arms} material={mat.carbon} />
