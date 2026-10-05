@@ -576,6 +576,7 @@ body.touch-mode .hud .timer {
 
 /* thumbs sit at the bottom corners in landscape */
 .touch .gas {
+  z-index: 1; /* sits over the BOOST pad that tucks in behind it */
   right: 24px;
   bottom: 24px;
   width: 132px;
@@ -592,10 +593,10 @@ body.touch-mode .hud .timer {
   border-color: rgba(255, 77, 90, 0.5);
 }
 
-/* BOOST sits straight above GO — same thumb, a short reach up. */
+/* BOOST sits straight above GO, tucked a little behind it — same thumb, a short reach up. */
 .touch .nosbtn {
   right: 44px;
-  bottom: 170px;
+  bottom: 142px; /* tucks ~15% behind GO (top edge at 156px) */
   width: 92px;
   height: 92px;
   font-size: 14px;
