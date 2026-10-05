@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { hud } from '../game/hud.js'
-import { NOS_CHARGES } from '../game/carState.js'
+import { NOS_CHARGES, NOS_REFILL_SECS } from '../game/carState.js'
 import { formatTime, formatDelta } from '../game/format.js'
 import { isMuted, toggleMute } from '../game/audio.js'
 import { netState, session } from '../game/net.js'
@@ -23,6 +23,7 @@ export default function Hud() {
   const oppRef = useRef(null)
   const nosRefs = useRef([])
   const boostKeyRef = useRef(null)
+  const nosTxtRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -67,6 +68,18 @@ export default function Hud() {
         el.className = 'pip' + (have ? ' on' : '')
         el.firstChild.style.transform = `scaleX(${charging ? hud.nosRefill.toFixed(3) : have ? 1 : 0})`
       }
+      if (nosTxtRef.current) {
+        // when is boost available? now (READY) or how long until the next charge
+        const wait = Math.ceil((1 - hud.nosRefill) * NOS_REFILL_SECS)
+        const txt =
+          hud.nosCharges >= NOS_CHARGES
+            ? 'NOS READY'
+            : hud.nosCharges > 0
+              ? `NOS READY · next +1 in ${wait}s`
+              : `NOS CHARGING · ${wait}s`
+        if (nosTxtRef.current.textContent !== txt) nosTxtRef.current.textContent = txt
+        nosTxtRef.current.className = hud.nosCharges > 0 ? 'ready' : 'wait'
+      }
       if (boostKeyRef.current) boostKeyRef.current.classList.toggle('on', hud.boost > 0.02)
       const d = deltaRef.current
       if (d) {
@@ -102,13 +115,6 @@ export default function Hud() {
       <div className="airtime"><span>AIRBORNE</span><b ref={airRef}>0.0s</b></div>
       <div className="boost" ref={boostRef}><span>BOOST</span><b ref={boostNumRef}>0.0s</b></div>
 
-      <div className="nos" title="NOS (Space)">
-        <span>NOS</span>
-        {Array.from({ length: NOS_CHARGES }, (_, i) => (
-          <i key={i} className="pip" ref={(el) => (nosRefs.current[i] = el)}><u /></i>
-        ))}
-      </div>
-
       <div className="timer">
         <span ref={timeRef}>0:00.000</span>
         <span ref={deltaRef} className="delta" />
@@ -122,6 +128,12 @@ export default function Hud() {
       </div>
 
       <div className="speed">
+        <div className="nos" title="NOS (Space)">
+          <span ref={nosTxtRef}>READY</span>
+          {Array.from({ length: NOS_CHARGES }, (_, i) => (
+            <i key={i} className="pip" ref={(el) => (nosRefs.current[i] = el)}><u /></i>
+          ))}
+        </div>
         <div className="revbar">
           <i ref={revRef} />
         </div>
