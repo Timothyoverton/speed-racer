@@ -1,3 +1,5 @@
+import { NOS_CHARGES } from './carState.js'
+
 // Mutable telemetry bag. The physics loop writes here every frame; the HUD reads
 // it on its own requestAnimationFrame. No React state involved.
 
@@ -15,6 +17,8 @@ export const hud = {
   airTime: 0, // seconds off the ground, for the flight readout
   topSpeedKmh: 0, // running max for the lap, banked with the record
   boost: 0, // seconds of boost left, drives the HUD flash
+  nosCharges: NOS_CHARGES, // driver NOS charges in hand
+  nosRefill: 0, // 0..1 progress to the next charge (1 when full)
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__hud = hud
@@ -33,4 +37,6 @@ export function resetHud(totalCheckpoints) {
   hud.airTime = 0
   hud.topSpeedKmh = 0
   hud.boost = 0
+  hud.nosCharges = NOS_CHARGES
+  hud.nosRefill = 1
 }

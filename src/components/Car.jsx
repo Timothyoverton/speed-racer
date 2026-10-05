@@ -11,7 +11,15 @@ import { elapsedMs } from '../game/timing.js'
 import { progress } from '../game/progress.js'
 import { activeGhost, ghostTimeAtPosition } from '../game/ghost.js'
 import { GROUND_Y } from '../game/trackVisuals.js'
-import { carState, resetCarState, updateDrivetrain, torqueFactor } from '../game/carState.js'
+import {
+  carState,
+  resetCarState,
+  updateDrivetrain,
+  torqueFactor,
+  NOS_CHARGES,
+  NOS_SECS,
+  NOS_REFILL_SECS,
+} from '../game/carState.js'
 import { updateAudio, idleAudio, thud, initAudio, boostWhoosh } from '../game/audio.js'
 import { getCarColour } from '../game/carColour.js'
 import { stopMusic } from '../game/music.js'
@@ -29,6 +37,10 @@ const MAX_SPEED = 62 // ~220 km/h ceiling; real top speed ~175 with drag
 const BOOST_SECS = 5
 const BOOST_MULT = 1.3
 const BOOST_RADIUS = 5.5
+// Driver NOS: a touch stronger than a pad, but short enough (2.5s) that it
+// can't carry the car across a gap the track wasn't tuned for.
+const NOS_MULT = 1.35
+const NOS_KICK = 6 // m/s shove on ignition, like the pads' kick
 const LIN_DRAG = 0.05 // 1/s
 const QUAD_DRAG = 0.0003 // 1/m
 const GRIP = 12 // lateral bite, 1/s — how tightly velocity tracks heading
@@ -98,6 +110,10 @@ export default function Car({ recorder }) {
   const carPos = useRef(new THREE.Vector3())
   const stuckTimer = useRef(0)
   const boostTimer = useRef(0)
+  const nosTimer = useRef(0) // seconds of driver NOS left
+  const nosCharges = useRef(NOS_CHARGES)
+  const nosRefill = useRef(0) // seconds since a charge was last spent/returned
+  const nosPrev = useRef(false)
   const ghostThrottle = useRef(0)
   const camInit = useRef(false)
   const airTimer = useRef(0)
@@ -225,8 +241,44 @@ export default function Car({ recorder }) {
         }
       }
     }
-    const boosting = boostTimer.current > 0
-    carState.boost = boostTimer.current
+    // ---- driver NOS ----
+    // Charges are full on the grid. Pressing boost (edge, so holding it can't
+    // drain the lot) burns one if none is already lit; spent charges come back
+    // one per NOS_REFILL_SECS.
+    if (!racing) {
+      nosCharges.current = NOS_CHARGES
+      nosRefill.current = 0
+      nosTimer.current = 0
+    } else {
+      if (nosTimer.current > 0) nosTimer.current = Math.max(0, nosTimer.current - dt)
+      if (nosCharges.current < NOS_CHARGES) {
+        nosRefill.current += dt
+        if (nosRefill.current >= NOS_REFILL_SECS) {
+          nosRefill.current = 0
+          nosCharges.current += 1
+        }
+      }
+      const nosPressed = input.boostTap || (input.boost && !nosPrev.current)
+      if (nosPressed && nosCharges.current > 0 && nosTimer.current <= 0) {
+        if (nosCharges.current === NOS_CHARGES) nosRefill.current = 0
+        nosCharges.current -= 1
+        nosTimer.current = NOS_SECS
+        boostWhoosh()
+        if (grounded) {
+          b.applyImpulse(
+            { x: fwd.current.x * NOS_KICK * b.mass(), y: 0, z: fwd.current.z * NOS_KICK * b.mass() },
+            true,
+          )
+        }
+      }
+    }
+    input.boostTap = false
+    nosPrev.current = input.boost
+    const nosOn = nosTimer.current > 0
+    const boosting = boostTimer.current > 0 || nosOn
+    const boostMult = nosOn ? NOS_MULT : boosting ? BOOST_MULT : 1
+    carState.boost = Math.max(boostTimer.current, nosTimer.current)
+    carState.nos = nosOn
 
     const lv = b.linvel()
     vel.current.set(lv.x, lv.y, lv.z)
@@ -266,7 +318,7 @@ export default function Car({ recorder }) {
     if (racing && grounded) {
       const throttle = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
       if (throttle > 0) {
-        const ceiling = MAX_SPEED * (boosting ? BOOST_MULT : 1)
+        const ceiling = MAX_SPEED * boostMult
         const taper = THREE.MathUtils.clamp(1 - vForward / ceiling, 0, 1)
         // lateralG is last frame's, which is close enough and avoids reordering
         const latG = Math.abs(carState.lateralG)
@@ -274,7 +326,7 @@ export default function Car({ recorder }) {
         const corner = MIN_CORNER_THROTTLE + (1 - MIN_CORNER_THROTTLE) * gripLeft
         impulse.current.addScaledVector(
           fwd.current,
-          ACCEL * (boosting ? BOOST_MULT : 1) * torqueFactor(rpm01) * taper * corner * dt,
+          ACCEL * boostMult * torqueFactor(rpm01) * taper * corner * dt,
         )
       } else if (throttle < 0) {
         if (vForward > 1) impulse.current.addScaledVector(fwd.current, -BRAKE_ACCEL * dt)
@@ -435,7 +487,9 @@ export default function Car({ recorder }) {
     hud.timeMs = elapsedMs()
     hud.checkpoints = progress.next
     hud.airborne = !grounded
-    hud.boost = boostTimer.current
+    hud.boost = carState.boost
+    hud.nosCharges = nosCharges.current
+    hud.nosRefill = nosCharges.current >= NOS_CHARGES ? 1 : nosRefill.current / NOS_REFILL_SECS
     hud.gear = carState.gear
     hud.rpm01 = carState.rpm01
     hud.drift = carState.slip

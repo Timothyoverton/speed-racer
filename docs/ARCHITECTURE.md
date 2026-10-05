@@ -262,6 +262,18 @@ grounded = !!hit
   `BOOST_RADIUS` (5.5 m) and grounded → an immediate forward impulse *and*
   `boostTimer = 5 s`, which raises the speed ceiling and drive multiplier by
   `BOOST_MULT` (1.3) (`src/components/Car.jsx:269-277`).
+- **Driver NOS** (`Car.jsx`, "driver NOS" block; constants `NOS_*` in
+  `carState.js`): Space (`input.boost`) or the BOOST pad on touch. A run starts
+  with `NOS_CHARGES` (3); a press burns one for `NOS_SECS` (2.5 s) at
+  `NOS_MULT` (1.35) on the same ceiling/drive multiplier the pads use, plus a
+  small forward kick. Spent charges return one at a time every
+  `NOS_REFILL_SECS` (10 s). The press is latched in `input.boostTap` (set by
+  `useKeys.js` / the touch pad, cleared by Car.jsx) so a tap shorter than one
+  frame can't be lost; a press while NOS is already lit is ignored so a held
+  or mashed key can't waste charges. Charges refill on the grid, not on a
+  checkpoint respawn. `carState.nos` drives the exhaust flames in
+  `CarModel.jsx`; `hud.nosCharges` / `hud.nosRefill` drive the pips. Drift
+  moved to Shift (`input.handbrake`).
 
 ---
 

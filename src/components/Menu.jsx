@@ -200,7 +200,7 @@ export default function Menu() {
 
         <div className="hint">
           <kbd>↑</kbd><kbd>↓</kbd> throttle / brake &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> steer<br />
-          <kbd>Space</kbd> handbrake &nbsp;·&nbsp; <kbd>R</kbd> restart instantly<br />
+          <kbd>Space</kbd> boost (3, recharges) &nbsp;·&nbsp; <kbd>Shift</kbd> drift &nbsp;·&nbsp; <kbd>R</kbd> restart<br />
           <kbd>Del</kbd> back to last checkpoint &nbsp;·&nbsp; <kbd>C</kbd> camera &nbsp;·&nbsp; <kbd>Q</kbd> quit &nbsp;·&nbsp; <kbd>M</kbd> mute
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { hud } from '../game/hud.js'
+import { NOS_CHARGES } from '../game/carState.js'
 import { formatTime, formatDelta } from '../game/format.js'
 import { isMuted, toggleMute } from '../game/audio.js'
 import { netState, session } from '../game/net.js'
@@ -20,6 +21,8 @@ export default function Hud() {
   const boostRef = useRef(null)
   const boostNumRef = useRef(null)
   const oppRef = useRef(null)
+  const nosRefs = useRef([])
+  const boostKeyRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -55,6 +58,16 @@ export default function Hud() {
         boostRef.current.style.opacity = on ? '1' : '0'
         if (on) boostNumRef.current.textContent = hud.boost.toFixed(1) + 's'
       }
+      // NOS pips: lit = a charge in hand, the next one fills as it recharges
+      for (let i = 0; i < NOS_CHARGES; i++) {
+        const el = nosRefs.current[i]
+        if (!el) continue
+        const have = i < hud.nosCharges
+        const charging = i === hud.nosCharges
+        el.className = 'pip' + (have ? ' on' : '')
+        el.firstChild.style.transform = `scaleX(${charging ? hud.nosRefill.toFixed(3) : have ? 1 : 0})`
+      }
+      if (boostKeyRef.current) boostKeyRef.current.classList.toggle('on', hud.boost > 0.02)
       const d = deltaRef.current
       if (d) {
         if (hud.ghostDeltaMs == null) {
@@ -89,6 +102,13 @@ export default function Hud() {
       <div className="airtime"><span>AIRBORNE</span><b ref={airRef}>0.0s</b></div>
       <div className="boost" ref={boostRef}><span>BOOST</span><b ref={boostNumRef}>0.0s</b></div>
 
+      <div className="nos" title="NOS (Space)">
+        <span>NOS</span>
+        {Array.from({ length: NOS_CHARGES }, (_, i) => (
+          <i key={i} className="pip" ref={(el) => (nosRefs.current[i] = el)}><u /></i>
+        ))}
+      </div>
+
       <div className="timer">
         <span ref={timeRef}>0:00.000</span>
         <span ref={deltaRef} className="delta" />
@@ -116,7 +136,8 @@ export default function Hud() {
       </div>
 
       <div className="restart-hint">
-        <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd ref={hbRef}>Space</kbd> handbrake &nbsp;·&nbsp;{' '}
+        <kbd>R</kbd> restart &nbsp;·&nbsp; <kbd ref={boostKeyRef}>Space</kbd> boost &nbsp;·&nbsp;{' '}
+        <kbd ref={hbRef}>Shift</kbd> drift &nbsp;·&nbsp;{' '}
         <kbd>Del</kbd> back to checkpoint &nbsp;·&nbsp; <kbd>C</kbd> camera &nbsp;·&nbsp; <kbd>Q</kbd> quit
       </div>
 

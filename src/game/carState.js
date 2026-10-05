@@ -26,6 +26,7 @@ export const carState = {
   lateral: 0, // metres from the road centreline, + towards the car's left
   onKerb: false,
   boost: 0, // seconds of NOS remaining
+  nos: false, // the driver-fired NOS is lit — drives the exhaust flames
 
   // drivetrain (for HUD + audio; does not feed the physics directly)
   gear: 1,
@@ -38,6 +39,13 @@ export const carState = {
   fwd: [0, 0, 1],
   right: [1, 0, 0],
 }
+
+// Driver-fired NOS (Space / the BOOST pad on touch). A run starts with
+// NOS_CHARGES in hand; each press burns one for NOS_SECS of extra power, and
+// spent charges trickle back one at a time every NOS_REFILL_SECS.
+export const NOS_CHARGES = 3
+export const NOS_SECS = 2.5
+export const NOS_REFILL_SECS = 10
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__car = carState
 
@@ -61,6 +69,8 @@ export function resetCarState() {
     landing: 0,
     lateral: 0,
     onKerb: false,
+    boost: 0,
+    nos: false,
     gear: 1,
     rpm: 900,
     rpm01: 0,

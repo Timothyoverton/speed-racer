@@ -592,6 +592,21 @@ body.touch-mode .hud .timer {
   border-color: rgba(255, 77, 90, 0.5);
 }
 
+/* BOOST sits straight above GO — same thumb, a short reach up. */
+.touch .nosbtn {
+  right: 44px;
+  bottom: 170px;
+  width: 92px;
+  height: 92px;
+  font-size: 14px;
+  border-color: rgba(37, 230, 255, 0.65);
+  color: #7ffbff;
+}
+.touch .nosbtn:active {
+  background: rgba(37, 230, 255, 0.4);
+  border-color: #7ffbff;
+}
+
 /* DRIFT sits by the BRAKE thumb, not the GO thumb — you often want full
    throttle and handbrake at the same moment, and one thumb can't do both. */
 .touch .hand {
@@ -770,6 +785,42 @@ button.ctrlmode.active {
   to { filter: brightness(1.5); }
 }
 
+/* NOS charges: three pips under the boost readout, each filling as it recharges */
+.hud .nos {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 3.2rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: #7ffbff;
+  opacity: 0.9;
+}
+.hud .nos .pip {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid rgba(127, 251, 255, 0.5);
+  background: rgba(10, 15, 33, 0.5);
+  overflow: hidden;
+}
+.hud .nos .pip u {
+  position: absolute;
+  inset: 0;
+  background: #25e6ff;
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0.45;
+}
+.hud .nos .pip.on u {
+  opacity: 1;
+  box-shadow: 0 0 8px #25e6ff;
+}
 /* ---- multiplayer -------------------------------------------------------- */
 
 button.cta:disabled {

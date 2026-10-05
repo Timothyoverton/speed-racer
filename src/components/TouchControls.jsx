@@ -69,6 +69,9 @@ export default function TouchControls() {
       <div className="pad gas" {...hold('forward')}>
         <span>GO</span>
       </div>
+      <div className="pad nosbtn" {...hold('boost')} onPointerDownCapture={() => (input.boostTap = true)}>
+        <span>BOOST</span>
+      </div>
       <div className="pad hand" {...hold('handbrake')}>
         <span>DRIFT</span>
       </div>

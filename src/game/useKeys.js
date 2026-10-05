@@ -10,7 +10,9 @@ const MAP = {
   KeyA: 'left',
   ArrowRight: 'right',
   KeyD: 'right',
-  Space: 'handbrake',
+  Space: 'boost',
+  ShiftLeft: 'handbrake',
+  ShiftRight: 'handbrake',
   KeyR: 'restart',
   Backspace: 'respawn',
   Delete: 'respawn',
@@ -22,8 +24,9 @@ const MAP = {
 // remote-desktop sessions, on-screen/virtual keyboards and synthetic events
 // routinely leave it empty, and then a code-only lookup silently drops the key.
 const KEY_MAP = {
-  ' ': 'handbrake',
-  spacebar: 'handbrake',
+  ' ': 'boost',
+  spacebar: 'boost',
+  shift: 'handbrake',
   arrowup: 'forward',
   arrowdown: 'back',
   arrowleft: 'left',
@@ -56,6 +59,8 @@ export const input = {
   left: false,
   right: false,
   handbrake: false,
+  boost: false, // NOS held (touch pad / key)
+  boostTap: false, // latched on press so a tap shorter than a frame still fires; Car.jsx clears it
   restart: false,
   respawn: false,
   quit: false,
@@ -84,8 +89,9 @@ export function useKeyboardInput() {
         return
       }
       input[action] = true
+      if (action === 'boost' && !e.repeat) input.boostTap = true
       // Space scrolls the page and activates a focused button; arrows scroll too
-      if (action === 'handbrake' || action === 'respawn' || /^Arrow/.test(e.key || '')) {
+      if (action === 'boost' || action === 'respawn' || /^Arrow/.test(e.key || '')) {
         e.preventDefault()
       }
       const el = document.activeElement
@@ -95,7 +101,7 @@ export function useKeyboardInput() {
       const action = actionFor(e)
       if (!action) return
       input[action] = false
-      if (action === 'handbrake') e.preventDefault()
+      if (action === 'boost') e.preventDefault()
     }
     const blur = () => {
       for (const k of Object.keys(input)) input[k] = false

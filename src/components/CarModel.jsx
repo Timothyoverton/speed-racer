@@ -242,7 +242,7 @@ function useMaterials(ghost, color) {
       }),
       exhaust: new THREE.MeshStandardMaterial({
         color: '#14161b',
-        emissive: '#ff4a12',
+        emissive: '#3d8bff',
         emissiveIntensity: 0,
         metalness: 0.7,
         roughness: 0.55,
@@ -344,6 +344,75 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
   const fl = useRef(null)
   const fr = useRef(null)
   const spin = [useRef(null), useRef(null), useRef(null), useRef(null)]
+  // NOS flames: one group per exhaust pipe, scaled in useFrame
+  const flames = [useRef(null), useRef(null), useRef(null), useRef(null)]
+  const flameLevel = useRef(0)
+  // One flame per pipe. A single additive cone shaded along its length instead
+  // of stacked flat-coloured cones: white-blue at the nozzle, blue through the
+  // body, burning to orange at the ragged tip, with shock diamonds banded
+  // through the blue (the tell of a real pressurised exhaust).
+  const flameGeo = useMemo(() => {
+    const g = new THREE.ConeGeometry(0.07, 1, 14, 1, true)
+    g.translate(0, 0.5, 0) // base at the origin
+    g.rotateX(-Math.PI / 2) // apex points back along -Z
+    return g
+  }, [])
+  const flameMats = useMemo(
+    () =>
+      [0, 1, 2, 3].map(
+        (i) =>
+          new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+            uniforms: { uTime: { value: 0 }, uPhase: { value: i * 1.7 } },
+            vertexShader: `
+              varying float vT; varying vec3 vN; varying vec3 vV;
+              void main() {
+                vT = clamp(-position.z, 0.0, 1.0);
+                vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                vN = normalize(normalMatrix * normal);
+                vV = normalize(-mv.xyz);
+                gl_Position = projectionMatrix * mv;
+              }`,
+            fragmentShader: `
+              uniform float uTime; uniform float uPhase;
+              varying float vT; varying vec3 vN; varying vec3 vV;
+              void main() {
+                float t = vT;
+                float flick = 0.82 + 0.18 * sin(uTime * 70.0 + uPhase + t * 9.0)
+                                   * sin(uTime * 43.0 + uPhase * 2.0);
+                // colour: hot white-blue -> saturated blue -> orange at the tip
+                vec3 col = mix(vec3(0.85, 0.95, 1.0), vec3(0.18, 0.42, 1.0), smoothstep(0.0, 0.3, t));
+                col = mix(col, vec3(1.0, 0.5, 0.12), smoothstep(0.5, 0.95, t));
+                // shock diamonds: tight bright bands in the first half
+                float d = pow(0.5 + 0.5 * sin(t * 34.0 - 1.2), 5.0) * (1.0 - smoothstep(0.1, 0.65, t));
+                col += vec3(0.5, 0.75, 1.0) * d * 1.2;
+                // soft edges: fade where the cone turns edge-on to the camera
+                float f = pow(abs(dot(normalize(vN), normalize(vV))), 0.7);
+                float a = pow(1.0 - t, 1.4) * f * flick;
+                gl_FragColor = vec4(col * 1.4, clamp(a, 0.0, 1.0));
+              }`,
+          }),
+      ),
+    [],
+  )
+  // blue bloom around each pipe mouth
+  const glowMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: '#3d8bff',
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    [],
+  )
+  const flameLight = useRef(null)
   const roll = useRef(0)
   const pitch = useRef(0)
   const gPitch = useRef(0)
@@ -399,6 +468,29 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       s.boost > 0 ? 2.4 : 0,
       1 - Math.exp(-8 * dt),
     )
+
+    // fire out of the pipes while the driver's NOS is lit: lights fast, dies
+    // away a touch slower, and the length breathes so it reads as a flame
+    flameLevel.current = THREE.MathUtils.lerp(
+      flameLevel.current,
+      s.nos ? 1 : 0,
+      1 - Math.exp(-(s.nos ? 22 : 10) * dt),
+    )
+    const fl01 = flameLevel.current
+    const now = performance.now() / 1000
+    for (let i = 0; i < flames.length; i++) {
+      const f = flames[i].current
+      if (!f) continue
+      f.visible = fl01 > 0.03
+      if (f.visible) {
+        flameMats[i].uniforms.uTime.value = now
+        const len = fl01 * (0.78 + Math.random() * 0.34) // metres: short and fierce
+        const w = 0.8 + fl01 * 0.3
+        f.scale.set(w, w, len)
+      }
+    }
+    glowMat.opacity = fl01 * (0.5 + Math.random() * 0.12)
+    if (flameLight.current) flameLight.current.intensity = fl01 * (2.2 + Math.random() * 0.8)
 
     // spokes become a smear once the wheel is turning fast enough
     mat.blur.opacity = THREE.MathUtils.clamp((s.speed - 12) / 26, 0, 0.55)
@@ -669,8 +761,26 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
               <cylinderGeometry args={[0.082, 0.082, 0.06, 12]} />
               <primitive object={mat.exhaust} attach="material" />
             </mesh>
+            {live && (
+              <>
+                <group
+                  ref={flames[[-0.46, -0.17, 0.17, 0.46].indexOf(x)]}
+                  position={[x, -0.26, -2.22]}
+                  visible={false}
+                >
+                  <mesh geometry={flameGeo}>
+                    <primitive object={flameMats[[-0.46, -0.17, 0.17, 0.46].indexOf(x)]} attach="material" />
+                  </mesh>
+                </group>
+                <mesh position={[x, -0.26, -2.24]}>
+                  <sphereGeometry args={[0.2, 12, 8]} />
+                  <primitive object={glowMat} attach="material" />
+                </mesh>
+              </>
+            )}
           </group>
         ))}
+        {live && <pointLight ref={flameLight} position={[0, -0.1, -2.7]} color="#4d8dff" intensity={0} distance={7} decay={2} />}
         {/* heat shield they sit against */}
         <mesh position={[0, -0.26, -1.92]} castShadow>
           <boxGeometry args={[1.22, 0.26, 0.12]} />
