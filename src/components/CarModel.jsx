@@ -384,16 +384,17 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
                 float t = vT;
                 float flick = 0.82 + 0.18 * sin(uTime * 70.0 + uPhase + t * 9.0)
                                    * sin(uTime * 43.0 + uPhase * 2.0);
-                // colour: hot white-blue -> saturated blue -> orange at the tip
+                // colour: hot white-blue -> saturated blue -> orange -> red at the tip
                 vec3 col = mix(vec3(0.85, 0.95, 1.0), vec3(0.18, 0.42, 1.0), smoothstep(0.0, 0.3, t));
-                col = mix(col, vec3(1.0, 0.5, 0.12), smoothstep(0.5, 0.95, t));
+                col = mix(col, vec3(1.0, 0.55, 0.12), smoothstep(0.3, 0.65, t));
+                col = mix(col, vec3(1.0, 0.16, 0.04), smoothstep(0.62, 0.95, t));
                 // shock diamonds: tight bright bands in the first half
                 float d = pow(0.5 + 0.5 * sin(t * 34.0 - 1.2), 5.0) * (1.0 - smoothstep(0.1, 0.65, t));
                 col += vec3(0.5, 0.75, 1.0) * d * 1.2;
                 // soft edges: fade where the cone turns edge-on to the camera
                 float f = pow(abs(dot(normalize(vN), normalize(vV))), 0.7);
-                float a = pow(1.0 - t, 1.4) * f * flick;
-                gl_FragColor = vec4(col * 1.4, clamp(a, 0.0, 1.0));
+                float a = (1.0 - smoothstep(0.55, 1.0, t)) * (1.0 - 0.35 * t) * f * flick;
+                gl_FragColor = vec4(col * (1.4 + 1.2 * smoothstep(0.4, 0.85, t)), clamp(a, 0.0, 1.0));
               }`,
           }),
       ),
@@ -484,7 +485,7 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
       f.visible = fl01 > 0.03
       if (f.visible) {
         flameMats[i].uniforms.uTime.value = now
-        const len = fl01 * (0.78 + Math.random() * 0.34) // metres: short and fierce
+        const len = fl01 * (0.95 + Math.random() * 0.4) // metres: short and fierce
         const w = 0.8 + fl01 * 0.3
         f.scale.set(w, w, len)
       }
