@@ -267,7 +267,7 @@ grounded = !!hit
   with `NOS_CHARGES` (3); a press burns one for `NOS_SECS` (2.5 s) at
   `NOS_MULT` (1.35) on the same ceiling/drive multiplier the pads use, plus a
   small forward kick. Spent charges return one at a time every
-  `NOS_REFILL_SECS` (10 s). The press is latched in `input.boostTap` (set by
+  `NOS_REFILL_SECS` (15 s). The press is latched in `input.boostTap` (set by
   `useKeys.js` / the touch pad, cleared by Car.jsx) so a tap shorter than one
   frame can't be lost; a press while NOS is already lit is ignored so a held
   or mashed key can't waste charges. Charges refill on the grid, not on a

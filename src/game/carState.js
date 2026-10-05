@@ -45,7 +45,7 @@ export const carState = {
 // spent charges trickle back one at a time every NOS_REFILL_SECS.
 export const NOS_CHARGES = 3
 export const NOS_SECS = 2.5
-export const NOS_REFILL_SECS = 10
+export const NOS_REFILL_SECS = 15
 
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__car = carState
 
