@@ -18,6 +18,7 @@ export const hud = {
   topSpeedKmh: 0, // running max for the lap, banked with the record
   boost: 0, // seconds of boost left, drives the HUD flash
   nosCharges: NOS_CHARGES, // driver NOS charges in hand
+  nosLeft: 0, // seconds of driver boost still burning
   nosRefill: 0, // 0..1 progress to the next charge (1 when full)
 }
 
@@ -38,5 +39,6 @@ export function resetHud(totalCheckpoints) {
   hud.topSpeedKmh = 0
   hud.boost = 0
   hud.nosCharges = NOS_CHARGES
+  hud.nosLeft = 0
   hud.nosRefill = 1
 }

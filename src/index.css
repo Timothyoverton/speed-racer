@@ -802,12 +802,11 @@ button.ctrlmode.active {
   letter-spacing: 1px;
   font-variant-numeric: tabular-nums;
 }
-.hud .nos span.ready { color: #7ffbff; text-shadow: 0 0 8px rgba(37, 230, 255, 0.7); }
-.hud .nos span.wait { color: var(--muted); }
+.hud .nos span { color: #7ffbff; text-shadow: 0 0 8px rgba(37, 230, 255, 0.7); }
 .hud .nos .pip {
   position: relative;
   display: block;
-  width: 56px; /* one bar, thirds marked by the ticks below */
+  width: 56px; /* one bar = one boost */
   height: 8px;
   border-radius: 2px;
   border: 1px solid rgba(127, 251, 255, 0.55);
@@ -821,12 +820,6 @@ button.ctrlmode.active {
   transform-origin: left;
   transform: scaleX(0);
   box-shadow: 0 0 6px #25e6ff;
-}
-.hud .nos .pip::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent calc(33.3% - 1px), rgba(8, 12, 26, 0.9) calc(33.3% - 1px) 33.3%, transparent 33.3% calc(66.6% - 1px), rgba(8, 12, 26, 0.9) calc(66.6% - 1px) 66.6%, transparent 66.6%);
 }
 body.touch-mode .hud .nos .pip { width: 40px; height: 7px; }
 body.touch-mode .hud .nos span { font-size: 8px; }

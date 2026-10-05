@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { hud } from '../game/hud.js'
-import { NOS_CHARGES, NOS_REFILL_SECS } from '../game/carState.js'
+import { NOS_SECS } from '../game/carState.js'
 import { formatTime, formatDelta } from '../game/format.js'
 import { isMuted, toggleMute } from '../game/audio.js'
 import { netState, session } from '../game/net.js'
@@ -23,7 +23,6 @@ export default function Hud() {
   const oppRef = useRef(null)
   const nosBarRef = useRef(null)
   const boostKeyRef = useRef(null)
-  const nosTxtRef = useRef(null)
   const [muted, setMuted] = useState(isMuted)
 
   useEffect(() => {
@@ -59,17 +58,17 @@ export default function Hud() {
         boostRef.current.style.opacity = on ? '1' : '0'
         if (on) boostNumRef.current.textContent = hud.boost.toFixed(1) + 's'
       }
-      // one bar: each charge is a third, and the next third fills as it recharges
+      // One bar = one boost. It drains across the whole burn, then refills; with
+      // no charge left it shows the recharge instead of snapping back to full.
       if (nosBarRef.current) {
-        const charging = hud.nosCharges < NOS_CHARGES ? hud.nosRefill : 0
-        nosBarRef.current.style.transform = `scaleX(${((hud.nosCharges + charging) / NOS_CHARGES).toFixed(3)})`
-      }
-      if (nosTxtRef.current) {
-        // plain "BOOST"; once a charge is spent, the seconds until the next one
-        const wait = Math.ceil((1 - hud.nosRefill) * NOS_REFILL_SECS)
-        const txt = hud.nosCharges >= NOS_CHARGES ? 'BOOST' : `BOOST ${wait}s`
-        if (nosTxtRef.current.textContent !== txt) nosTxtRef.current.textContent = txt
-        nosTxtRef.current.className = hud.nosCharges > 0 ? 'ready' : 'wait'
+        const burning = hud.nosLeft > 0
+        const fill = burning
+          ? hud.nosLeft / NOS_SECS
+          : hud.nosCharges > 0
+            ? 1
+            : hud.nosRefill
+        nosBarRef.current.style.transition = burning ? 'none' : 'transform 0.4s ease-out'
+        nosBarRef.current.style.transform = `scaleX(${fill.toFixed(3)})`
       }
       if (boostKeyRef.current) boostKeyRef.current.classList.toggle('on', hud.boost > 0.02)
       const d = deltaRef.current
@@ -120,7 +119,7 @@ export default function Hud() {
 
       <div className="speed">
         <div className="nos" title="Boost (Space)">
-          <span ref={nosTxtRef}>BOOST</span>
+          <span>BOOST</span>
           <i className="pip"><u ref={nosBarRef} /></i>
         </div>
         <div className="revbar">

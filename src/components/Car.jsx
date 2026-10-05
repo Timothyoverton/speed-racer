@@ -489,6 +489,7 @@ export default function Car({ recorder }) {
     hud.airborne = !grounded
     hud.boost = carState.boost
     hud.nosCharges = nosCharges.current
+    hud.nosLeft = nosTimer.current
     hud.nosRefill = nosCharges.current >= NOS_CHARGES ? 1 : nosRefill.current / NOS_REFILL_SECS
     hud.gear = carState.gear
     hud.rpm01 = carState.rpm01
