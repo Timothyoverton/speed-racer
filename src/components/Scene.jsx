@@ -9,12 +9,13 @@ import SkyDome from './SkyDome.jsx'
 import { useRunId } from '../game/store.js'
 import { BOUNDS } from '../game/trackVisuals.js'
 import { carState } from '../game/carState.js'
+import { THEME } from '../game/themes.js'
 
 const [cx, , cz] = BOUNDS.center
-const R = BOUNDS.radius
 
-// late-afternoon sun, low enough to throw long shadows down the straights
-const SUN = [-0.55, 0.32, 0.77]
+// Direction comes from the track's theme. Test Pad keeps the original
+// late-afternoon angle, low enough to throw long shadows down the straights.
+const SUN = THEME.sun.dir
 const SUN_DIST = 300
 const sunPos = [cx + SUN[0] * SUN_DIST, SUN[1] * SUN_DIST, cz + SUN[2] * SUN_DIST]
 
@@ -57,7 +58,7 @@ export default function Scene() {
         antialias: true,
         powerPreference: 'high-performance',
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.04,
+        toneMappingExposure: THEME.exposure,
       }}
     >
       <PerformanceMonitor
@@ -67,30 +68,25 @@ export default function Scene() {
         onFallback={() => setDprMax(0.75)}
       />
       <AdaptiveDpr pixelated />
-      <color attach="background" args={['#cddff0']} />
-      {/* Haze tinted to the sky at the horizon, so distance reads as depth
-          rather than everything fading to white. Starts further out than it
-          used to: with the hills sitting 600-1400m away, an early fog was
-          bleaching the whole skyline into the sky and flattening the picture. */}
-      {/* matched to SkyDome's horizon colour, so a distant hill fades into the
-          sky behind it instead of into a slightly different blue */}
-      <fog attach="fog" args={['#c6dced', 620, 2200]} />
+      <color attach="background" args={[THEME.sky.horizon]} />
+      {/* Haze tinted to this track's horizon, so distance reads as depth.
+          The colour is the sky horizon (themes.js keeps them as one string):
+          a distant hill fades into the sky behind it instead of into a
+          slightly different blue. */}
+      <fog attach="fog" args={[THEME.fog.color, THEME.fog.near, THEME.fog.far]} />
 
-      {/* Less turbidity, more rayleigh: turbidity is haze (whiter), rayleigh is
-          the blue scattering. The old pairing washed out to near-white overhead
-          and took all the depth with it. */}
-      <SkyDome sunDir={SUN} />
+      <SkyDome />
 
       <Environment resolution={128} frames={1} background={false}>
         <mesh scale={120}>
           <sphereGeometry args={[1, 24, 24]} />
-          <meshBasicMaterial color="#9dbde2" side={THREE.BackSide} />
+          <meshBasicMaterial color={THEME.env.sky} side={THREE.BackSide} />
         </mesh>
         {/* ground bounce */}
         <Lightformer
           form="rect"
-          intensity={0.5}
-          color="#4d6a45"
+          intensity={THEME.env.groundIntensity}
+          color={THEME.env.ground}
           scale={[80, 80, 1]}
           position={[0, -12, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
@@ -98,8 +94,8 @@ export default function Scene() {
         {/* the sun */}
         <Lightformer
           form="circle"
-          intensity={9}
-          color="#fff0d0"
+          intensity={THEME.env.sunIntensity}
+          color={THEME.env.sun}
           scale={[10, 10, 1]}
           position={[SUN[0] * 30, SUN[1] * 30 + 6, SUN[2] * 30]}
           target={[0, 0, 0]}
@@ -110,8 +106,8 @@ export default function Scene() {
           <Lightformer
             key={s}
             form="rect"
-            intensity={2.6}
-            color="#ffffff"
+            intensity={THEME.env.stripIntensity}
+            color={THEME.env.strip}
             scale={[3, 40, 1]}
             position={[s * 14, 22, 0]}
             rotation={[Math.PI / 2, 0, 0]}
@@ -120,22 +116,22 @@ export default function Scene() {
         {/* soft sky fill from overhead */}
         <Lightformer
           form="rect"
-          intensity={1.4}
-          color="#cfe2ff"
+          intensity={THEME.env.fillIntensity}
+          color={THEME.env.fill}
           scale={[60, 60, 1]}
           position={[0, 30, 0]}
           rotation={[Math.PI / 2, 0, 0]}
         />
       </Environment>
 
-      <hemisphereLight args={['#cfe0ff', '#37402f', 0.55]} />
+      <hemisphereLight args={[THEME.hemi.sky, THEME.hemi.ground, THEME.hemi.intensity]} />
       <directionalLight
         ref={sun}
         castShadow
         position={sunPos}
         target-position={[cx, 0, cz]}
-        intensity={2.6}
-        color="#fff2dc"
+        intensity={THEME.sun.intensity}
+        color={THEME.sun.color}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-shadowSpan}
         shadow-camera-right={shadowSpan}
