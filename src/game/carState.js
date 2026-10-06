@@ -43,7 +43,7 @@ export const carState = {
 // Driver-fired NOS (Space / the BOOST pad on touch). A run starts with
 // NOS_CHARGES in hand; each press burns one for NOS_SECS of extra power, and
 // spent charges trickle back one at a time every NOS_REFILL_SECS.
-export const NOS_CHARGES = 3
+export const NOS_CHARGES = 1
 export const NOS_SECS = 2.5
 export const NOS_REFILL_SECS = 15
 

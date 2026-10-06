@@ -251,7 +251,8 @@ export default function Car({ recorder }) {
       nosTimer.current = 0
     } else {
       if (nosTimer.current > 0) nosTimer.current = Math.max(0, nosTimer.current - dt)
-      if (nosCharges.current < NOS_CHARGES) {
+      // the recharge only runs once the burn is over, so the bar drains and then fills
+      if (nosCharges.current < NOS_CHARGES && nosTimer.current <= 0) {
         nosRefill.current += dt
         if (nosRefill.current >= NOS_REFILL_SECS) {
           nosRefill.current = 0
