@@ -195,6 +195,16 @@ export default function Scenery() {
       if (colors) colors.push(color)
     }
 
+    // Snow cap for a rock cone centred at (x,y,z): apex shared with the rock, and
+    // wide enough to wrap it. (Narrower than the rock at its base, the cap sinks
+    // inside the cone and only a dark triangle shows.)
+    const putCap = (x, y, z, sz, sy, yaw, color) => {
+      const ch = sy * 0.42
+      put(out.snow, out.snowColors, {
+        p: [x, y + sy * 0.5 - ch / 2, z], r: [0, yaw, 0], s: [sz * 0.48, ch, sz * 0.48],
+      }, color)
+    }
+
     // Disc around the circuit's bounds, clumped so thickets and clearings form.
     // Rejecting anything near the ribbon is what keeps the infield full without
     // planting a cone on the racing line.
@@ -283,28 +293,43 @@ export default function Scenery() {
               s: [0.22, 0.07, len],
             }, tint)
           }
+        } else if (f.snow) {
+          // Freefall's road sits well above the valley, so what the driver sees is
+          // only the part of the tree above the road. Build that part as a stout
+          // three-tier conifer with a snow cap, and hold it up with a dark-green
+          // post so nothing floats.
+          const vis = h * 1.25
+          const base = Math.min(10, Math.max(w * 1.5, vis * 0.5))
+          const up = foot - gy
+          if (up > 1) {
+            put(out.posts, out.postColors, { p: [x, gy + up * 0.5, z], r: [0, rand(), 0], s: [1.6, up, 1.6] }, tint)
+          } else {
+            put(out.trunks, out.trunkColors, { p: [x, gy + 0.9, z], r: [0, rand() * 3, 0], s: [0.7, 1.8, 0.7] }, bark)
+          }
+          const tiers = [
+            [0.0, 0.7, 1],
+            [0.3, 0.6, 0.72],
+            [0.58, 0.46, 0.5],
+          ]
+          for (const [at, th, wk] of tiers) {
+            put(out.crowns, out.crownColors, {
+              p: [x, foot + vis * (at + th * 0.5), z], r: [0, rand() * 3, 0], s: [base * wk, vis * th, base * wk],
+            }, tint)
+          }
+          put(out.crowns, out.crownColors, {
+            p: [x, foot + vis * 0.92, z], r: [0, rand() * 3, 0], s: [base * 0.24, vis * 0.2, base * 0.24],
+          }, pick(rand, f.snowPalette))
         } else {
           const crown = foot + h * 0.55
           const trunkH = Math.max(h * 0.45, crown - gy)
-          // a cone trunk comes to a point, so on a raised road you only see the
-          // tip. A cylinder keeps its thickness up at the roadside.
-          const raised = trunkH > h + 3
-          const bulk = raised ? 1.7 : 1
-          if (raised) {
-            put(out.posts, out.postColors, {
-              p: [x, gy + trunkH * 0.5, z], r: [0, rand(), 0], s: [1.7, trunkH, 1.7],
-            }, bark)
-          } else {
-            put(out.trunks, out.trunkColors, {
-              p: [x, gy + trunkH * 0.5, z], r: [0, rand() * 3, 0], s: [0.5, trunkH, 0.5],
-            }, bark)
-          }
+          put(out.trunks, out.trunkColors, {
+            p: [x, gy + trunkH * 0.5, z], r: [0, rand() * 3, 0], s: [0.5, trunkH, 0.5],
+          }, bark)
           // two stacked cones give a conifer a waist instead of a single triangle
-          put(out.crowns, out.crownColors, { p: [x, crown, z], r: [0, rand() * 3, 0], s: [w * bulk, h * 0.8, w * bulk] }, tint)
-          const top = f.snow ? pick(rand, f.snowPalette) : tint
+          put(out.crowns, out.crownColors, { p: [x, crown, z], r: [0, rand() * 3, 0], s: [w, h * 0.8, w] }, tint)
           put(out.crowns, out.crownColors, {
-            p: [x, crown + h * 0.36, z], r: [0, rand() * 3, 0], s: [w * 0.66 * bulk, h * 0.55, w * 0.66 * bulk],
-          }, top)
+            p: [x, crown + h * 0.36, z], r: [0, rand() * 3, 0], s: [w * 0.66, h * 0.55, w * 0.66],
+          }, tint)
         }
       }
       if (f.band) scatterBeside(f.count, f.band[0], f.band[1], f.clear, placeTree)
@@ -389,11 +414,27 @@ export default function Scenery() {
         const sy = sz * (0.42 + rand() * 0.3)
         if (blocked(x, z, sz * 0.5 + 8)) return false
         const yaw = rand() * 6
-        put(out.spires, out.spireColors, { p: [x, gy - sy * 0.05, z], r: [0, yaw, 0], s: [sz, sy, sz] }, pick(rand, p.rock))
-        put(out.snow, out.snowColors, {
-          p: [x, gy - sy * 0.05 + sy * 0.32, z], r: [0, yaw, 0], s: [sz * 0.32, sy * 0.28, sz * 0.32],
-        }, pick(rand, p.snow))
+        put(out.spires, out.spireColors, { p: [x, gy + sy * 0.45, z], r: [0, yaw, 0], s: [sz, sy, sz] }, pick(rand, p.rock))
+        putCap(x, gy + sy * 0.45, z, sz, sy, yaw, pick(rand, p.snow))
       })
+    }
+
+    if (spec.massifs) {
+      for (const ring of [spec.massifs.near, spec.massifs.far]) {
+        for (let i = 0, tries = 0; i < ring.count && tries < ring.count * 12; tries++) {
+          const a = rand() * Math.PI * 2
+          const rad = Math.max(ring.min, R + 80) + rand() * ring.span
+          const sz = ring.size[0] + rand() * ring.size[1]
+          const sy = sz * (0.62 + rand() * 0.34)
+          const x = cx + Math.cos(a) * rad
+          const z = cz + Math.sin(a) * rad
+          if (blocked(x, z, sz * 0.5 + 10)) continue
+          const yaw = rand() * 6
+          put(out.spires, out.spireColors, { p: [x, gy + sy * 0.45, z], r: [0, yaw, 0], s: [sz, sy, sz * 0.9] }, pick(rand, ring.rock))
+          putCap(x, gy + sy * 0.45, z, sz, sy, yaw, pick(rand, ring.snow))
+          i++
+        }
+      }
     }
 
     if (spec.hills) {
@@ -621,6 +662,45 @@ export default function Scenery() {
       })
     }
 
+    if (spec.skyline) {
+      const k = spec.skyline
+      // Towers face the circuit and carry a sparse grid of lit windows, so the
+      // horizon reads as a lived-in industrial district, not a flat slab.
+      for (let i = 0, tries = 0; i < k.count && tries < k.count * 12; tries++) {
+        const a = rand() * Math.PI * 2
+        const rad = Math.max(k.min, R + 80) + rand() * k.span
+        const w = 14 + rand() * 30
+        const d = 14 + rand() * 26
+        const h = 45 + rand() * 150
+        const x = cx + Math.cos(a) * rad
+        const z = cz + Math.sin(a) * rad
+        if (blocked(x, z, Math.hypot(w, d) * 0.5 + 10)) continue
+        const yaw = Math.atan2(cx - x, cz - z)
+        put(out.solid, out.solidColors, { p: [x, gy + h / 2, z], r: [0, yaw, 0], s: [w, h, d] }, pick(rand, k.palette))
+        const sy = Math.sin(yaw)
+        const cy = Math.cos(yaw)
+        const cols = Math.max(2, Math.floor(w / 4.5))
+        const rows = Math.floor((h - 8) / 7)
+        for (let rI = 0; rI < rows; rI++) {
+          for (let cI = 0; cI < cols; cI++) {
+            if (rand() > 0.5) continue
+            const lx = (cI - (cols - 1) / 2) * 4.5
+            const ly = gy + 6 + rI * 7
+            put(out.glow, out.glowColors, {
+              p: [x + cy * lx + sy * (d / 2 + 0.1), ly, z - sy * lx + cy * (d / 2 + 0.1)],
+              r: [0, yaw, 0],
+              s: [2, 2.6, 0.2],
+            }, pick(rand, k.windows))
+          }
+        }
+        // red aircraft light on the taller ones
+        if (h > 80) {
+          put(out.glow, out.glowColors, { p: [x, gy + h + 1, z], r: [0, yaw, 0], s: [1.2, 1.2, 1.2] }, '#ff3b3b')
+        }
+        i++
+      }
+    }
+
     if (spec.blocks) {
       const b = spec.blocks
       const wins = ['#ffd98a', '#9ad4ff', '#ff8ac4', '#fff4d0', '#7dffe0', '#c4b0ff']
@@ -718,7 +798,37 @@ export default function Scenery() {
     [spec.clouds],
   )
 
-  const span = Math.max(2600, (R + 800) * 2)
+  // Sea: four slabs framing the circuit's own bounding box, so the water starts a
+  // fixed distance past the outermost road however long and thin the track is.
+  const sea = useMemo(() => {
+    if (!spec.sea) return null
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity
+    for (const t of TRACK.tiles) {
+      x0 = Math.min(x0, t.pos[0]); x1 = Math.max(x1, t.pos[0])
+      z0 = Math.min(z0, t.pos[2]); z1 = Math.max(z1, t.pos[2])
+    }
+    const m = TRACK.roadWidth / 2 + spec.sea.inner
+    x0 -= m; x1 += m; z0 -= m; z1 += m
+    const big = 4800
+    const rects = []
+    const cxm = (x0 + x1) / 2
+    const czm = (z0 + z1) / 2
+    // north / south / west / east, overlapping at the corners
+    rects.push({ x: cxm, z: z0 - big / 2, w: big * 2, d: big })
+    rects.push({ x: cxm, z: z1 + big / 2, w: big * 2, d: big })
+    rects.push({ x: x0 - big / 2, z: czm, w: big, d: big * 2 })
+    rects.push({ x: x1 + big / 2, z: czm, w: big, d: big * 2 })
+    const out = rects.map((r) => ({ ...r, shallow: false, lift: 0 }))
+    // pale shallows along the shoreline
+    const sh = 60
+    out.push({ x: cxm, z: z0 - sh / 2, w: x1 - x0 + 2 * sh, d: sh, shallow: true, lift: 0.02 })
+    out.push({ x: cxm, z: z1 + sh / 2, w: x1 - x0 + 2 * sh, d: sh, shallow: true, lift: 0.02 })
+    out.push({ x: x0 - sh / 2, z: czm, w: sh, d: z1 - z0, shallow: true, lift: 0.02 })
+    out.push({ x: x1 + sh / 2, z: czm, w: sh, d: z1 - z0, shallow: true, lift: 0.02 })
+    return out
+  }, [spec])
+
+  const span = Math.max(2600, (R + THEME.fog.far + 200) * 2)
   const trunkGeo = extra.palm ? geos.cyl : geos.cone
   const scrubGeo = extra.roundScrub ? geos.ball : geos.cone
 
@@ -729,6 +839,20 @@ export default function Scenery() {
         <primitive object={ground} attach="material" />
       </mesh>
 
+      {sea && (
+        <group position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          {sea.map((r, i) => (
+            <mesh key={i} position={[r.x, -r.z, 0.04 + r.lift]}>
+              <planeGeometry args={[r.w, r.d]} />
+              <meshStandardMaterial
+                color={r.shallow ? spec.sea.shallow : spec.sea.color}
+                roughness={r.shallow ? 0.3 : 0.22}
+                metalness={r.shallow ? 0.05 : 0.15}
+              />
+            </mesh>
+          ))}
+        </group>
+      )}
       <Shapes items={extra.hills} geometry={geos.hill} material={mat.white} colors={extra.hillColors} />
       <Shapes items={extra.spires} geometry={geos.hill} material={mats.rock} colors={extra.spireColors} />
       <Shapes items={extra.snow} geometry={geos.cone} material={mat.snow} colors={extra.snowColors} />

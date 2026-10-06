@@ -51,7 +51,8 @@ export const THEMES = {
     },
   },
 
-  // Open, fast, coastal. High sun, a pale horizon, palms instead of a forest.
+  // Open, fast, coastal. High sun, pale sand, a sea ringing the land, and a few
+  // wind-bent palms instead of a forest.
   'long-ribbon-1': {
     sky: { zenith: '#3e8fe2', horizon: '#d4eef8', sun: '#fff6dc', warm: 0.35, glow: 1, stars: 0 },
     sun: { dir: [-0.22, 0.8, 0.56], color: '#fff8ec', intensity: 2.55, disc: '#fffdf4', discSize: 12 },
@@ -69,10 +70,11 @@ export const THEMES = {
       fillIntensity: 1.6,
     },
     exposure: 1.05,
-    ground: { kind: 'grass', color: '#e5f0c8' },
+    ground: { kind: 'sand', color: '#d8c690' },
     scenery: {
+      sea: { inner: 70, color: '#2f93cc', shallow: '#78cfd6' },
       forest: {
-        count: 520,
+        count: 150,
         clear: 18,
         band: [16, 120],
         snow: 0,
@@ -85,17 +87,16 @@ export const THEMES = {
         clear: 10,
         minOff: 10,
         maxOff: 70,
-        palette: ['#c2b15a', '#8ea84a', '#d2c46e', '#6e9444', '#b7a24e'],
+        palette: ['#c8bb6a', '#a7b45a', '#d8cc80', '#8ea352', '#bfae5c'],
       },
       dunes: {
-        count: 64,
+        count: 90,
         minOff: 16,
         maxOff: 200,
         palette: ['#e6d2a4', '#f0e0b8', '#d4c08a', '#cbb888', '#f4e8c8', '#d8c49a'],
       },
       hills: {
-        near: { count: 16, min: 700, span: 200, sink: 14, h0: 0.1, h1: 0.06, palette: ['#7f9aa4', '#6d8e98', '#8eab9a', '#7494a0'] },
-        far: { count: 18, min: 1100, span: 400, sink: 28, h0: 0.16, h1: 0.1, palette: ['#9ebcc8', '#a9c6d0', '#8eb0bc', '#b7d0da'] },
+        far: { count: 10, min: 1300, span: 400, sink: 40, h0: 0.12, h1: 0.08, palette: ['#9ebcc8', '#a9c6d0', '#8eb0bc', '#b7d0da'] },
       },
       clouds: { count: 26, opacity: 0.4, emissive: '#e7f4ff', emissiveIntensity: 0.3 },
     },
@@ -184,7 +185,7 @@ export const THEMES = {
     ground: { kind: 'snow', color: '#e3ebf3' },
     scenery: {
       forest: {
-        count: 1300,
+        count: 850,
         clear: 18,
         band: [16, 110],
         snow: 1,
@@ -205,6 +206,24 @@ export const THEMES = {
         maxOff: 420,
         rock: ['#4e5c6a', '#3d4c5c', '#5c6c7c', '#2f3e4e', '#647484'],
         snow: ['#f7f9fb', '#e8eef4', '#ffffff', '#dfe7f0'],
+      },
+      massifs: {
+        near: {
+          count: 14,
+          min: 380,
+          span: 420,
+          size: [260, 220],
+          rock: ['#4f6178', '#44566e', '#5a6c82', '#3c4e66'],
+          snow: ['#f7f9fc', '#e9eff6', '#ffffff'],
+        },
+        far: {
+          count: 16,
+          min: 950,
+          span: 600,
+          size: [420, 380],
+          rock: ['#8499b3', '#7a90ab', '#90a4bb', '#6f86a2'],
+          snow: ['#f4f8fc', '#e6eef7', '#ffffff'],
+        },
       },
       clouds: { count: 18, opacity: 0.42, emissive: '#f4f8ff', emissiveIntensity: 0.35 },
     },
@@ -271,7 +290,7 @@ export const THEMES = {
   // Night industrial. The moon is bright enough that the asphalt stays readable;
   // the sky itself stays dark, with stars in the dome rather than a second mesh.
   'mission-impossible-5': {
-    sky: { zenith: '#070b18', horizon: '#1a2236', sun: '#d5def8', warm: 0, glow: 0.42, stars: 1 },
+    sky: { zenith: '#070b18', horizon: '#1a2236', sun: '#d5def8', warm: 0, glow: 0.42, stars: 1, tone: true },
     sun: { dir: [-0.4, 0.82, 0.42], color: '#d0dcff', intensity: 2.25, disc: '#eef3ff', discSize: 8 },
     fog: { color: '#1a2236', near: 260, far: 1500 },
     hemi: { sky: '#2a3658', ground: '#141820', intensity: 0.42 },
@@ -289,16 +308,12 @@ export const THEMES = {
     exposure: 1.12,
     ground: { kind: 'night', color: '#2a3142' },
     scenery: {
-      hills: {
-        far: {
-          count: 18,
-          min: 800,
-          span: 400,
-          sink: 20,
-          h0: 0.18,
-          h1: 0.12,
-          palette: ['#1c2438', '#222c44', '#181e30', '#2a3450'],
-        },
+      skyline: {
+        count: 60,
+        min: 120,
+        span: 600,
+        palette: ['#1c2232', '#232a3c', '#171c2a', '#2a3248', '#1f2638'],
+        windows: ['#ffd98a', '#9ad4ff', '#ff8ac4', '#fff4d0', '#7dffe0', '#c4b0ff'],
       },
       blocks: {
         count: 48,

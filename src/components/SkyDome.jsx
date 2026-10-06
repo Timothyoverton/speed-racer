@@ -58,6 +58,12 @@ const FS = /* glsl */ `
       col += vec3(0.82, 0.88, 1.0) * spark * smoothstep(0.0, 0.22, d.y);
     }
     gl_FragColor = vec4(col, 1.0);
+    // Night: run the dome through the same tone-map + encode as the ground, or
+    // the fogged horizon (tone-mapped, so lighter) shows as a slab against it.
+    #ifdef SKY_TONED
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    #endif
   }
 `
 
@@ -94,7 +100,8 @@ export default function SkyDome() {
           side={THREE.BackSide}
           depthWrite={false}
           fog={false}
-          toneMapped={false}
+          toneMapped={!!sky.tone}
+          defines={sky.tone ? { SKY_TONED: 1 } : {}}
           uniforms={uniforms}
         />
       </mesh>
