@@ -776,7 +776,77 @@ const MISSION_IMPOSSIBLE = buildTrack({
   ],
 })
 
-export const TRACKS = [TEST_PAD, SLIPSTREAM, QIDDIYA_RUSH, FREEFALL, STUNT_PARK, MISSION_IMPOSSIBLE]
+// --- Track 6: Fish Pond ------------------------------------------------------
+// Driving along the bottom of an aquarium. The three set pieces are Mission
+// Impossible's proven combos, each with a boost pad and a run-up. Everything
+// between them is flat, with corners of 110m and up so the wide sweepers can be
+// taken without lifting much. On the 20m road the slalom blocks leave a lane
+// open on the far side, so it is a lane choice rather than a thread.
+const FISH_POND = buildTrack({
+  id: 'fish-pond-7',
+  name: 'Fish Pond',
+  roadWidth: 20,
+  medals: medalsFromAuthor(55), // placeholder until measured with real laps
+  course: [
+    ['start'],
+    ['straight', 40],
+    ['boost'],
+    ['straight', 50],
+    ['jump', 26, 4.6], // THE LILY PAD — kicker over the first hole
+    ['gap', 38, 9],
+    ['ramp', 40, -6],
+    ['straight', 60],
+    ['checkpoint'],
+
+    // THE KELP RUN — wide sweepers either way, nothing to brake for
+    ['turn', 60, 110],
+    ['straight', 30],
+    ['turn', -60, 120],
+    ['straight', 50],
+
+    // THE SLALOM — coral blocks alternating sides, 60m apart
+    ['straight', 40],
+    ['wall', 3.5, 8, 2.4],
+    ['straight', 60],
+    ['wall', -3.5, 8, 2.4],
+    ['straight', 60],
+    ['wall', 3.5, 8, 2.4],
+    ['straight', 60],
+    ['turn', 45, 110],
+    ['straight', 40],
+    ['checkpoint'],
+
+    // THE FISH POND — launch off the ramp on the left, or hit the block on the right
+    ['boost'],
+    ['straight', 60],
+    ['stuntramp', -3.5, 7, 16, 3.4],
+    ['wall', 3.5, 7, 2.6],
+    ['straight', 16],
+    ['pool', 40, 12],
+    ['ramp', 46, -7],
+    ['straight', 60],
+    ['checkpoint'],
+
+    // THE TREASURE DROP — the big one, down into the deep end
+    ['boost'],
+    ['straight', 46],
+    ['jump', 30, 7.0],
+    ['gap', 72, 26],
+    ['ramp', 90, -16],
+    ['straight', 110],
+    ['finish'],
+  ],
+})
+
+export const TRACKS = [
+  TEST_PAD,
+  SLIPSTREAM,
+  QIDDIYA_RUSH,
+  FREEFALL,
+  STUNT_PARK,
+  MISSION_IMPOSSIBLE,
+  FISH_POND,
+]
 
 const TRACK_KEY = 'speed-racer:track'
 

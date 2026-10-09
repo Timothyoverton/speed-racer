@@ -186,6 +186,7 @@ export default function Scenery() {
       glow: [], glowColors: [], floods: [],
       clouds: [], cloudColors: [], arches: [], archColors: [],
       balloons: [], balloonColors: [],
+      kelp: [], kelpColors: [], coral: [], coralColors: [],
       palm: !!(spec.forest && spec.forest.palm),
       roundScrub: !!(spec.scrub && spec.scrub.round),
     }
@@ -752,6 +753,118 @@ export default function Scenery() {
       })
     }
 
+    // --- seabed (fish pond) -----------------------------------------------------
+    // These stand on the floor, so they use gy rather than footOf(). A stalk that
+    // rises past an elevated road is fine: it's kelp, and it's meant to be tall.
+    if (spec.kelp) {
+      const k = spec.kelp
+      scatterBeside(k.count, k.minOff, k.maxOff, 6, (x, z) => {
+        const stalks = 3 + ((rand() * 3) | 0)
+        const tint = pick(rand, k.palette)
+        for (let s = 0; s < stalks; s++) {
+          const sx = x + (rand() - 0.5) * 4.5
+          const sz = z + (rand() - 0.5) * 4.5
+          const h = k.hMin + rand() * (k.hMax - k.hMin)
+          const lean = (rand() - 0.5) * 0.2
+          put(out.kelp, out.kelpColors, {
+            p: [sx, gy + h / 2, sz], r: [lean, rand() * 6, lean * 0.5], s: [0.4, h, 0.4],
+          }, tint)
+          // a pair of crossed blades at mid-height, so a stalk reads as a plant
+          for (let b = 0; b < 2; b++) {
+            put(out.kelp, out.kelpColors, {
+              p: [sx, gy + h * (0.35 + b * 0.3), sz],
+              r: [0, rand() * 6, (b ? 1 : -1) * 0.35],
+              s: [0.08, 1.8, 0.7],
+            }, tint)
+          }
+        }
+      })
+    }
+
+    // Branching coral: a fan of stubby columns from one base, each tilted a
+    // different way, so a head reads as coral from a car's height.
+    if (spec.coral) {
+      const c = spec.coral
+      scatterBeside(c.count, c.minOff, c.maxOff, 4, (x, z) => {
+        const tint = pick(rand, c.palette)
+        const branches = 4 + ((rand() * 3) | 0)
+        for (let b = 0; b < branches; b++) {
+          const len = 2.2 + rand() * 3.6
+          const thick = 0.45 + rand() * 0.45
+          const e = new THREE.Euler((rand() - 0.5) * 0.9, rand() * 6, (rand() - 0.5) * 0.9, 'YXZ')
+          const d = new THREE.Vector3(0, 1, 0).applyEuler(e)
+          put(out.coral, out.coralColors, {
+            p: [x + (d.x * len) / 2, gy + (d.y * len) / 2, z + (d.z * len) / 2],
+            r: [e.x, e.y, e.z],
+            s: [thick, len, thick],
+          }, tint)
+        }
+      })
+    }
+
+    // A sunken castle: a keep, four corner towers with cone roofs, a battlemented
+    // front and back, a dark gate and lit windows. Built in the road's own axes.
+    if (spec.castles) {
+      const c = spec.castles
+      scatterBeside(c.count, c.minOff, c.maxOff, 26, (x, z, yaw) => {
+        const W = 20
+        const D = 15
+        const H = 9
+        const T = 16
+        const [lx, lz] = lateralAxis(yaw)
+        const [fx, fz] = forwardAxis(yaw)
+        // u across the road, v along it, y up from the floor
+        const at = (u, v, y) => [x + lx * u + fx * v, gy + y, z + lz * u + fz * v]
+        const stone = pick(rand, c.palette)
+        const roof = pick(rand, c.roofs)
+        put(out.solid, out.solidColors, { p: at(0, 0, H / 2), r: [0, yaw, 0], s: [W, H, D] }, stone)
+        for (const u of [-1, 1]) {
+          for (const v of [-1, 1]) {
+            put(out.posts, out.postColors, { p: at((u * W) / 2, (v * D) / 2, T / 2), r: [0, yaw, 0], s: [3.4, T, 3.4] }, stone)
+            put(out.crowns, out.crownColors, { p: at((u * W) / 2, (v * D) / 2, T + 3.5), r: [0, yaw, 0], s: [4.4, 7, 4.4] }, roof)
+          }
+        }
+        for (const v of [-1, 1]) {
+          for (let k = 0; k < 6; k++) {
+            put(out.solid, out.solidColors, {
+              p: at(-W / 2 + 1 + (k * (W - 2)) / 5, (v * D) / 2, H + 0.6), r: [0, yaw, 0], s: [1.5, 1.2, 1.2],
+            }, stone)
+          }
+        }
+        put(out.solid, out.solidColors, { p: at(0, D / 2 + 0.05, 2), r: [0, yaw, 0], s: [3.4, 4, 0.5] }, '#3a2a20')
+        for (const u of [-6, 6]) {
+          put(out.glow, out.glowColors, { p: at(u, D / 2 + 0.1, 6), r: [0, yaw, 0], s: [1.1, 1.8, 0.2] }, '#ffd98a')
+        }
+      })
+    }
+
+    // A treasure chest: dark wood body, iron bands on the front, and a gold lid
+    // on the unlit glow material so it reads as lit from inside.
+    if (spec.chests) {
+      const ch = spec.chests
+      scatterBeside(ch.count, ch.minOff, ch.maxOff, 4, (x, z, yaw) => {
+        const [lx, lz] = lateralAxis(yaw)
+        const [fx, fz] = forwardAxis(yaw)
+        const at = (u, v, y) => [x + lx * u + fx * v, gy + y, z + lz * u + fz * v]
+        put(out.solid, out.solidColors, { p: at(0, 0, 0.65), r: [0, yaw, 0], s: [2.4, 1.3, 1.6] },
+          pick(rand, ['#7a4a24', '#8b5a2b', '#6b3f1f']))
+        for (const u of [-0.7, 0.7]) {
+          put(out.metal, out.metalColors, { p: at(u, 0.85, 0.65), r: [0, yaw, 0], s: [0.16, 1.4, 0.12] }, '#c9a24a')
+        }
+        put(out.glow, out.glowColors, { p: at(0, 0, 1.55), r: [0, yaw, 0], s: [2.5, 0.5, 1.7] }, '#ffc83a')
+      })
+    }
+
+    // A wrecked hull lying on the floor, with a mast still standing.
+    if (spec.wrecks) {
+      const wk = spec.wrecks
+      scatterBeside(wk.count, wk.minOff, wk.maxOff, 14, (x, z, yaw) => {
+        put(out.solid, out.solidColors, { p: [x, gy + 1.4, z], r: [0.12, yaw, 0.18], s: [16, 3, 6] },
+          pick(rand, ['#5a3e2a', '#6e4c32', '#4a3426']))
+        put(out.metal, out.metalColors, { p: [x, gy + 7, z], r: [0.15, yaw, -0.3], s: [0.5, 15, 0.5] }, '#8a7a60')
+      })
+    }
+
     return out
   }, [cx, cz, R, gy, spec])
 
@@ -870,11 +983,13 @@ export default function Scenery() {
       <Boxes items={extra.metal} material={mat.metal} colors={extra.metalColors} castShadow />
       <Boxes items={extra.solid} material={mat.solid} colors={extra.solidColors} castShadow />
       <Boxes items={extra.fronds} material={mat.solid} colors={extra.frondColors} />
+      <Boxes items={extra.kelp} material={mat.solid} colors={extra.kelpColors} />
       <Boxes items={extra.banners} material={mat.banner} colors={extra.bannerColors} />
       <Boxes items={extra.glow} material={mat.glow} colors={extra.glowColors} />
       <Boxes items={extra.floods} material={mat.flood} />
 
       <Shapes items={extra.arches} geometry={geos.arch} material={mat.arch} colors={extra.archColors} castShadow />
+      <Shapes items={extra.coral} geometry={geos.cyl} material={mat.white} colors={extra.coralColors} />
       <Shapes items={extra.balloons} geometry={geos.ball} material={mat.white} colors={extra.balloonColors} />
       <Shapes items={extra.clouds} geometry={geos.puff} material={mat.cloud} colors={extra.cloudColors} />
     </group>

@@ -335,6 +335,90 @@ export const THEMES = {
       },
     },
   },
+
+  // The bottom of an aquarium. Teal water overhead, pale sand underfoot, and the
+  // seabed furniture: coral, kelp, rock stacks, a sunken castle, a chest with a
+  // gold lid. Fish and bubbles come from the `fish` spec (FishSchool.jsx).
+  'fish-pond-7': {
+    sky: { zenith: '#2f9fc4', horizon: '#3aa7bd', sun: '#f2ffff', warm: 0.1, glow: 0.7, stars: 0 },
+    sun: { dir: [-0.1, 0.9, 0.4], color: '#fffbea', intensity: 2.3, disc: '#f7ffff', discSize: 11 },
+    fog: { color: '#3aa7bd', near: 60, far: 650 },
+    hemi: { sky: '#bdf3f5', ground: '#2e6f70', intensity: 0.6 },
+    env: {
+      sky: '#7fd4dc',
+      ground: '#3b8f93',
+      groundIntensity: 0.5,
+      sun: '#fff8e0',
+      sunIntensity: 7,
+      strip: '#e6fdff',
+      stripIntensity: 1.8,
+      fill: '#c5f5f8',
+      fillIntensity: 1.5,
+    },
+    exposure: 1.05,
+    ground: { kind: 'sand', color: '#d8c9a0' },
+    scenery: {
+      dunes: {
+        count: 70,
+        minOff: 14,
+        maxOff: 150,
+        palette: ['#e6d3a6', '#f0e2bc', '#d9c28e', '#cbb27e', '#f4e8c8'],
+      },
+      mesas: {
+        count: 14,
+        minOff: 30,
+        maxOff: 170,
+        palette: ['#7d8a8c', '#8f9a98', '#6e7b7e', '#a09b8c', '#5f6e70'],
+        caps: ['#b8c2bf', '#a4b0ad', '#c9cfc9', '#8e9a92', '#aab5b0'],
+      },
+      spires: {
+        count: 20,
+        minOff: 22,
+        maxOff: 150,
+        palette: ['#8b8f8a', '#9aa096', '#7a817e', '#b0a890', '#6f7a78'],
+      },
+      scrub: {
+        count: 120,
+        clear: 8,
+        minOff: 8,
+        maxOff: 60,
+        round: true,
+        palette: ['#ff6f91', '#ff9a6b', '#c77dff', '#ff7aa2', '#ffb347', '#e05d9a', '#8ee3d4'],
+      },
+      coral: {
+        count: 110,
+        minOff: 8,
+        maxOff: 70,
+        palette: ['#ff6f7a', '#ff8c5a', '#e0609c', '#b98cff', '#ff9f6b', '#f7a1c4'],
+      },
+      kelp: {
+        count: 80,
+        minOff: 12,
+        maxOff: 130,
+        hMin: 9,
+        hMax: 22,
+        palette: ['#4f7a2e', '#5f8a36', '#3d6b2a', '#6b8f3a', '#7a9a44', '#2f5e34'],
+      },
+      castles: {
+        count: 2,
+        minOff: 45,
+        maxOff: 150,
+        palette: ['#e2c7a8', '#d3b9a0', '#c2b7b0', '#e6d8c0'],
+        roofs: ['#2f6f8a', '#8a3d4a', '#3d5a80'],
+      },
+      chests: { count: 4, minOff: 9, maxOff: 40 },
+      wrecks: { count: 2, minOff: 40, maxOff: 160 },
+      clouds: { count: 10, opacity: 0.16, emissive: '#c8fbff', emissiveIntensity: 0.4 },
+    },
+    fish: {
+      schools: 16,
+      darters: 8,
+      big: 3,
+      palette: ['#ff8a2a', '#ff6b3d', '#2f7fd8', '#4fc3f7', '#ffd23a', '#ffffff', '#f2f2f2', '#ff4d6d'],
+      bigPalette: ['#5b7a8c', '#6d8f7a', '#7f7f8f'],
+      bubbles: { columns: 18, perColumn: 6, minOff: 3, maxOff: 21, height: 40 },
+    },
+  },
 }
 
 for (const id in THEMES) {

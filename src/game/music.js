@@ -81,6 +81,18 @@ const PRESETS = {
     shimmer: 0.3,
     gain: 0.07,
   },
+  'fish-pond-7': {
+    // light and floaty: a bright register, a soft triangle pad, and quick
+    // pulses with a lot of shimmer on top, like bubbles coming up
+    root: -17,
+    chords: [[0, 4, 12], [2, 7, 14], [-3, 4, 9], [0, 7, 12]],
+    wave: 'triangle',
+    cutoff: 620,
+    sweep: 300,
+    pulseSec: 1.8,
+    shimmer: 0.5,
+    gain: 0.065,
+  },
 }
 
 // A big soft reverb from a decaying noise burst — what gives it the space.
