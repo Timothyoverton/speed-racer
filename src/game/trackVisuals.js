@@ -100,6 +100,7 @@ function build(track) {
 
     // barriers — a concrete base with an emissive sponsor band on the inner face
     for (const s of [1, -1]) {
+      if (s > 0 ? tile.openPos : tile.openNeg) continue // fork: open towards the other route
       place(wall, tile, [s * (rw / 2 + WALL_W / 2), top + WALL_H / 2, 0], [WALL_W, WALL_H, len + 0.04])
       // a touch of tonal variety so the concrete isn't one flat grey
       const shade = 0.9 + ((i * 7919) % 100) / 500
@@ -117,7 +118,7 @@ function build(track) {
 
     // Chevron boards on the OUTSIDE of a corner, on the way in — the visual
     // cue that the road is about to turn, before you can see how much.
-    const prev = track.tiles[i - 1]
+    const prev = tile.branchStart ? undefined : track.tiles[i - 1]
     const enteringCorner = tile.curve && (!prev || !prev.curve)
     if (enteringCorner) {
       const outside = -tile.curve
@@ -136,7 +137,7 @@ function build(track) {
     // colour change. At 150km/h a hole reads as more road until you're in it,
     // so mark both lips hard. This is as much fairness as decoration.
     const next = track.tiles[i + 1]
-    if (next) {
+    if (next && !next.branchStart) {
       const horiz = Math.cos(tile.pitch)
       const dir = [Math.sin(tile.rot[1]) * horiz, Math.sin(tile.pitch), Math.cos(tile.rot[1]) * horiz]
       const end = tile.pos.map((c, k) => c + (dir[k] * tile.size[2]) / 2)
@@ -192,6 +193,7 @@ function build(track) {
     // marker posts every few tiles, outside the barrier
     if (i % 4 === 0) {
       for (const s of [1, -1]) {
+        if (s > 0 ? tile.openPos : tile.openNeg) continue
         place(post, tile, [s * (rw / 2 + WALL_W + 0.5), top + 1.5, 0], [0.16, 3.0, 0.16])
       }
     }

@@ -5,85 +5,22 @@
 // Each fish is a function of time, not something that accumulates frame to
 // frame. It rides the road's own centreline at a lateral offset, so a school
 // keeps pace with the car (or comes at it), and the lap's shape carries through
-// the corners.
+// the corners. The only state is the scatter offset: fish near the car are
+// shoved aside and ease back, which is why it is kept per fish.
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { TRACK } from '../game/track.js'
 import { THEME } from '../game/themes.js'
 import { GROUND_Y } from '../game/trackVisuals.js'
+import { carState } from '../game/carState.js'
+import { TILES, LAP, HALF, rng, roadPoint } from './roadPath.js'
 
-// Same generator as Scenery.jsx, so the pond looks identical on every load.
-function rng(seed) {
-  let a = seed
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-const TILES = TRACK.tiles
-const LAP = TRACK.length
-const HALF = TRACK.roadWidth / 2
-const RUN = TILES.map((t) => t.size[2] * Math.cos(t.pitch)) // horizontal run
-const STARTS = TILES.map((t) => t.dist)
 const FLOOR = GROUND_Y + 0.9 // the height Scenery plants its props on
 const DT = 0.05 // finite-difference step for heading
-
-// Index of the tile whose run covers arc length q (binary search on the starts).
-function tileAt(q) {
-  let lo = 0
-  let hi = TILES.length - 1
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1
-    if (STARTS[mid] <= q) lo = mid
-    else hi = mid - 1
-  }
-  return lo
-}
-
-// Point on tile i's centreline, `off` metres along it from the tile centre.
-function onTile(i, off, out) {
-  const t = TILES[i]
-  const yaw = t.rot[1]
-  return out.set(t.pos[0] + Math.sin(yaw) * off, t.pos[1] + Math.tan(t.pitch) * off, t.pos[2] + Math.cos(yaw) * off)
-}
-
-const EDGE_A = new THREE.Vector3()
-const EDGE_B = new THREE.Vector3()
-
-// Heading at fraction f through tile i. Each tile's own heading would snap the
-// lateral offset sideways at every chord joint (2m on a 40m offset through a
-// corner), so blend between the heading at each joint instead.
-function yawAt(i, f) {
-  const last = TILES.length - 1
-  const a = i > 0 ? (TILES[i - 1].rot[1] + TILES[i].rot[1]) / 2 : TILES[i].rot[1]
-  const b = i < last ? (TILES[i].rot[1] + TILES[i + 1].rot[1]) / 2 : TILES[i].rot[1]
-  return a + (b - a) * f
-}
-
-// Centreline at arc length q, `lat` to the left and `up` above the road. Across a
-// hole there is no tile, so this runs a straight line from the lip to the
-// landing rather than carrying a take-off slope on into the air.
-function roadPoint(q, lat, up, out) {
-  const i = tileAt(q)
-  const end = STARTS[i] + RUN[i]
-  if (q <= end || i + 1 >= TILES.length) {
-    onTile(i, q - STARTS[i] - RUN[i] / 2, out)
-  } else {
-    onTile(i, RUN[i] / 2, EDGE_A)
-    onTile(i + 1, -RUN[i + 1] / 2, EDGE_B)
-    out.lerpVectors(EDGE_A, EDGE_B, (q - end) / (STARTS[i + 1] - end))
-  }
-  const yaw = yawAt(i, Math.min(1, Math.max(0, (q - STARTS[i]) / RUN[i])))
-  out.x += Math.cos(yaw) * lat
-  out.z -= Math.sin(yaw) * lat
-  out.y += up
-  return out
-}
+// Fish inside this many metres of the car dart off, and drift back once it has
+// gone. The push falls off linearly to nothing at the edge of the bubble.
+const SCARE_R = 25
+const SCARE_PUSH = 7
 
 const P0 = new THREE.Vector3()
 const P1 = new THREE.Vector3()
@@ -100,6 +37,11 @@ function poseAt(f, t, out) {
     // darts in and out across the open water on its side, never over the tarmac
     lat = f.side * (HALF + 3 + 11 * (0.5 + 0.5 * Math.sin(f.rate * t + f.phase)))
     up = f.up + Math.sin(t * 3 + f.phase) * 0.3
+  } else if (f.kind === 'bait') {
+    // a bait ball: fish on a ring in the plane across the road, turning in place
+    const a = f.a0 + f.rate * t
+    lat = f.lat + Math.cos(a) * f.radius
+    up = f.up + Math.sin(a) * f.radius
   } else {
     lat = f.lat + Math.sin(t * 0.7 + f.phase) * 0.8
     up = f.up + Math.sin(t * 1.3 + f.phase) * 0.8
@@ -174,6 +116,31 @@ function buildFish(spec, rand) {
       hex: pick(spec.bigPalette),
     })
   }
+
+  // A bait ball: two counter-turning rings of small fish, held over one stretch.
+  // dir and speed are zero, so each fish stays at q0 and only the ring moves.
+  if (spec.bait) {
+    const b = spec.bait
+    for (let k = 0; k < b.count; k++) {
+      const inner = k % 2 === 1
+      fish.push({
+        kind: 'bait',
+        q0: b.q,
+        dir: 0,
+        speed: 0,
+        lat: b.lat,
+        up: b.up,
+        radius: inner ? b.radius * 0.55 : b.radius,
+        a0: (((k >> 1) / (b.count / 2)) * Math.PI * 2),
+        rate: inner ? -1.5 : 1.1,
+        phase: rand() * Math.PI * 2,
+        size: 0.7 + rand() * 0.15,
+        wagRate: 11,
+        wag: 0.6,
+        hex: pick(spec.palette),
+      })
+    }
+  }
   return fish
 }
 
@@ -227,6 +194,8 @@ export default function FishSchool() {
     const f = buildFish(spec, rand)
     return { fish: f, bubbles: buildBubbles(spec, rand) }
   }, [spec])
+  // per-fish scatter offset (x, y, z), eased by the frame loop; made on first frame
+  const scatterRef = useRef(null)
 
   const bodyGeo = useMemo(() => new THREE.SphereGeometry(0.5, 10, 8), [])
   const tailGeo = useMemo(() => {
@@ -253,17 +222,52 @@ export default function FishSchool() {
     if (tail.instanceColor) tail.instanceColor.needsUpdate = true
   }, [fish])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const body = bodyRef.current
     const tail = tailRef.current
     const bub = bubbleRef.current
     if (!body || !tail || !bub) return
     const t = state.clock.elapsedTime
+    const dt = Math.min(delta, 1 / 30)
+    const car = carState.pos
+    if (!scatterRef.current) scatterRef.current = new Float32Array(fish.length * 3)
+    const scatter = scatterRef.current
 
     for (let i = 0; i < fish.length; i++) {
       const f = fish[i]
       const fade = poseAt(f, t, P0)
       poseAt(f, t + DT, P1)
+
+      // Scatter: a fish inside the car's bubble is shoved away from it (and a
+      // little up), and eases back once the car has gone. The offset is state
+      // in scatter[], so the fish glides rather than teleports.
+      const sx = P0.x - car[0]
+      const sy = P0.y - car[1]
+      const sz = P0.z - car[2]
+      const d = Math.hypot(sx, sy, sz)
+      const near = d < SCARE_R
+      let tx = 0
+      let ty = 0
+      let tz = 0
+      if (near) {
+        const k = ((1 - d / SCARE_R) * SCARE_PUSH) / Math.max(d, 0.5)
+        tx = sx * k
+        ty = sy * k + 1.5 * (1 - d / SCARE_R)
+        tz = sz * k
+      }
+      const ease = 1 - Math.exp(-dt * (near ? 5 : 1.2))
+      const o = i * 3
+      scatter[o] += (tx - scatter[o]) * ease
+      scatter[o + 1] += (ty - scatter[o + 1]) * ease
+      scatter[o + 2] += (tz - scatter[o + 2]) * ease
+      P0.x += scatter[o]
+      P0.y += scatter[o + 1]
+      P0.z += scatter[o + 2]
+      P1.x += scatter[o]
+      P1.y += scatter[o + 1]
+      P1.z += scatter[o + 2]
+      if (P0.y < FLOOR + 1.5) P0.y = FLOOR + 1.5
+
       const vx = P1.x - P0.x
       const vy = P1.y - P0.y
       const vz = P1.z - P0.z

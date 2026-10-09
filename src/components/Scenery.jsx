@@ -8,7 +8,7 @@ import Boxes, { Shapes } from './Boxes.jsx'
 import { BOUNDS, GROUND_Y } from '../game/trackVisuals.js'
 import { sampleTrack } from '../game/trackQuery.js'
 import { TRACK } from '../game/track.js'
-import { trackMaterials } from '../game/materials.js'
+import { trackMaterials, UW, CAUSTIC_GLSL, causticMap, litUnderwater } from '../game/materials.js'
 import { THEME } from '../game/themes.js'
 
 const CROWD = ['#d84a4a', '#3a6ec4', '#f2f4f8', '#e0b03a', '#2f9a5a', '#8a93a6', '#1c2430', '#e8e0d4', '#c46b2f']
@@ -64,7 +64,7 @@ function buildKeepOut() {
   const ribbon = TRACK.roadWidth / 2 + 1.4
   for (let i = 0; i < ends.length; i++) {
     add(ends[i].a[0], ends[i].a[1], ends[i].b[0], ends[i].b[1], ribbon)
-    if (i + 1 < ends.length) {
+    if (i + 1 < ends.length && !TRACK.tiles[i + 1].branchStart) {
       const gap = Math.hypot(ends[i + 1].a[0] - ends[i].b[0], ends[i + 1].a[1] - ends[i].b[1])
       // corner chords miss by a few tens of centimetres; a real hole is >= 5m
       if (gap > 3) add(ends[i].b[0], ends[i].b[1], ends[i + 1].a[0], ends[i + 1].a[1], ribbon)
@@ -152,6 +152,49 @@ function noiseGround(kind, color) {
   return new THREE.MeshStandardMaterial({ map: tex, color, roughness: 1, metalness: 0 })
 }
 
+// Sand under water: broad damp and dry patches so the floor stops tiling, fine
+// ripples, and a moving net of caustics. All world-space (the plane is one big
+// quad), all faded out with distance so far sand stays calm instead of shimmering.
+function sandUnderwater(mat, spec) {
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = UW.time
+    shader.uniforms.uCaustic = { value: causticMap() }
+    shader.uniforms.uCaustColor = { value: new THREE.Color(spec.color) }
+    shader.uniforms.uCaustK = { value: spec.strength }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWorld;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        varying vec3 vWorld;
+        uniform float uTime;
+        uniform vec3 uCaustColor;
+        uniform float uCaustK;
+        ${CAUSTIC_GLSL}`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+        float wDist = length(vWorld - cameraPosition);
+        float wNear = 1.0 - smoothstep(30.0, 170.0, wDist);
+        vec2 wp = vWorld.xz;
+        float wPatch = sin(wp.x * 0.021 + sin(wp.y * 0.017) * 2.0) * sin(wp.y * 0.026 + sin(wp.x * 0.013) * 2.0);
+        diffuseColor.rgb *= 1.0 + 0.12 * wPatch;
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.82, 0.92, 0.98), smoothstep(0.1, 0.8, wPatch));
+        float ripple = 0.5 + 0.5 * sin(2.7 * (wp.x * 0.92 + wp.y * 0.38 + 2.6 * sin(wp.x * 0.07) * sin(wp.y * 0.055)));
+        diffuseColor.rgb *= 1.0 - 0.1 * ripple * wNear;`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `outgoingLight += uCaustColor * caustic(wp * 0.07, uTime * 0.9) * uCaustK * wNear;
+        #include <opaque_fragment>`,
+      )
+  }
+  return mat
+}
+
 export default function Scenery() {
   const mats = useMemo(() => trackMaterials(), [])
   const [cx, , cz] = BOUNDS.center
@@ -167,7 +210,8 @@ export default function Scenery() {
       mats.grass.color.set(g.color)
       return mats.grass
     }
-    return noiseGround(g.kind, g.color)
+    const m = noiseGround(g.kind, g.color)
+    return THEME.water ? sandUnderwater(m, THEME.water.caustics) : m
   }, [mats])
 
   const extra = useMemo(() => {
@@ -187,6 +231,8 @@ export default function Scenery() {
       clouds: [], cloudColors: [], arches: [], archColors: [],
       balloons: [], balloonColors: [],
       kelp: [], kelpColors: [], coral: [], coralColors: [],
+      coralBalls: [], coralBallColors: [], glowBalls: [], glowBallColors: [],
+      boulders: [], boulderColors: [], blades: [], bladeColors: [],
       palm: !!(spec.forest && spec.forest.palm),
       roundScrub: !!(spec.scrub && spec.scrub.round),
     }
@@ -770,11 +816,11 @@ export default function Scenery() {
             p: [sx, gy + h / 2, sz], r: [lean, rand() * 6, lean * 0.5], s: [0.4, h, 0.4],
           }, tint)
           // a pair of crossed blades at mid-height, so a stalk reads as a plant
-          for (let b = 0; b < 2; b++) {
-            put(out.kelp, out.kelpColors, {
-              p: [sx, gy + h * (0.35 + b * 0.3), sz],
-              r: [0, rand() * 6, (b ? 1 : -1) * 0.35],
-              s: [0.08, 1.8, 0.7],
+          for (let b = 0; b < 3; b++) {
+            put(out.blades, out.bladeColors, {
+              p: [sx, gy + h * (0.25 + b * 0.22) + 1.2, sz],
+              r: [0, rand() * 6, (b % 2 ? 1 : -1) * 0.35],
+              s: [0.95, 2.4, 1],
             }, tint)
           }
         }
@@ -783,20 +829,107 @@ export default function Scenery() {
 
     // Branching coral: a fan of stubby columns from one base, each tilted a
     // different way, so a head reads as coral from a car's height.
+    // Four kinds, so the reef isn't one shape in six colours: branching fingers
+    // with glowing tips, brain-coral domes, sea fans on a stalk, tube sponges.
     if (spec.coral) {
       const c = spec.coral
+      const glowTip = (x, y, z, r) =>
+        put(out.glowBalls, out.glowBallColors, { p: [x, y, z], r: [0, 0, 0], s: [r, r, r] }, pick(rand, c.glow))
       scatterBeside(c.count, c.minOff, c.maxOff, 4, (x, z) => {
         const tint = pick(rand, c.palette)
-        const branches = 4 + ((rand() * 3) | 0)
-        for (let b = 0; b < branches; b++) {
-          const len = 2.2 + rand() * 3.6
-          const thick = 0.45 + rand() * 0.45
-          const e = new THREE.Euler((rand() - 0.5) * 0.9, rand() * 6, (rand() - 0.5) * 0.9, 'YXZ')
-          const d = new THREE.Vector3(0, 1, 0).applyEuler(e)
-          put(out.coral, out.coralColors, {
-            p: [x + (d.x * len) / 2, gy + (d.y * len) / 2, z + (d.z * len) / 2],
-            r: [e.x, e.y, e.z],
-            s: [thick, len, thick],
+        const kind = rand()
+        if (kind < 0.46) {
+          const lit = rand() < 0.4
+          const branches = 4 + ((rand() * 3) | 0)
+          for (let b = 0; b < branches; b++) {
+            const len = 2.2 + rand() * 3.6
+            const thick = 0.45 + rand() * 0.45
+            const e = new THREE.Euler((rand() - 0.5) * 0.9, rand() * 6, (rand() - 0.5) * 0.9, 'YXZ')
+            const d = new THREE.Vector3(0, 1, 0).applyEuler(e)
+            put(out.coral, out.coralColors, {
+              p: [x + (d.x * len) / 2, gy + (d.y * len) / 2, z + (d.z * len) / 2],
+              r: [e.x, e.y, e.z],
+              s: [thick, len, thick],
+            }, tint)
+            if (lit) glowTip(x + d.x * len, gy + d.y * len + thick * 0.2, z + d.z * len, thick * 1.1)
+          }
+        } else if (kind < 0.7) {
+          const n = 1 + ((rand() * 3) | 0)
+          for (let k = 0; k < n; k++) {
+            const w = 1.6 + rand() * 2.4
+            put(out.coralBalls, out.coralBallColors, {
+              p: [x + (rand() - 0.5) * 2.6, gy + w * 0.04, z + (rand() - 0.5) * 2.6],
+              r: [0, rand() * 6, 0],
+              s: [w, w * (0.34 + rand() * 0.18), w],
+            }, k ? pick(rand, c.palette) : tint)
+          }
+        } else if (kind < 0.86) {
+          const h = 2.4 + rand() * 2.8
+          const yaw = rand() * 3
+          put(out.coral, out.coralColors, { p: [x, gy + h * 0.28, z], r: [0, 0, 0], s: [0.2, h * 0.56, 0.2] }, tint)
+          put(out.coralBalls, out.coralBallColors, { p: [x, gy + h * 0.76, z], r: [0, yaw, 0], s: [h * 0.95, h * 0.8, 0.14] }, pick(rand, c.palette))
+        } else {
+          const n = 3 + ((rand() * 3) | 0)
+          for (let k = 0; k < n; k++) {
+            const len = 1.3 + rand() * 2.2
+            const th = 0.6 + rand() * 0.4
+            const sx = x + (rand() - 0.5) * 2
+            const sz = z + (rand() - 0.5) * 2
+            put(out.coral, out.coralColors, { p: [sx, gy + len / 2, sz], r: [0, 0, 0], s: [th, len, th] }, tint)
+            if (rand() < 0.5) glowTip(sx, gy + len + 0.05, sz, th * 0.75)
+          }
+        }
+      })
+    }
+
+    // Boulders in loose groups: lumpy ellipsoids half sunk in the sand, so the
+    // seabed has rock at ground level and not only soaring mesas.
+    if (spec.boulders) {
+      const bo = spec.boulders
+      scatterBeside(bo.count, bo.minOff, bo.maxOff, 5, (x, z) => {
+        const n = 2 + ((rand() * 3) | 0)
+        const base = pick(rand, bo.palette)
+        for (let k = 0; k < n; k++) {
+          const w = 1.4 + rand() * 3.6
+          const bx = x + (rand() - 0.5) * 5
+          const bz = z + (rand() - 0.5) * 5
+          if (blocked(bx, bz, w * 0.6 + 2)) continue
+          put(out.boulders, out.boulderColors, {
+            p: [bx, gy + w * 0.12, bz], r: [(rand() - 0.5) * 0.4, rand() * 6, (rand() - 0.5) * 0.4],
+            s: [w, w * (0.5 + rand() * 0.35), w * (0.7 + rand() * 0.4)],
+          }, k ? pick(rand, bo.palette) : base)
+        }
+      })
+    }
+
+    // Glowing sea-pens: a thin stalk with a bright bulb, in small colonies.
+    if (spec.anemones) {
+      const an = spec.anemones
+      scatterBeside(an.count, an.minOff, an.maxOff, 4, (x, z) => {
+        const tint = pick(rand, an.palette)
+        const n = 3 + ((rand() * 4) | 0)
+        for (let k = 0; k < n; k++) {
+          const h = 1.2 + rand() * 2.2
+          const sx = x + (rand() - 0.5) * 3.2
+          const sz = z + (rand() - 0.5) * 3.2
+          put(out.kelp, out.kelpColors, { p: [sx, gy + h / 2, sz], r: [0, 0, 0], s: [0.1, h, 0.1] }, '#58786a')
+          put(out.glowBalls, out.glowBallColors, { p: [sx, gy + h, sz], r: [0, 0, 0], s: [0.45, 0.45, 0.45] }, tint)
+        }
+      })
+    }
+
+    // Seagrass: low clumps of blades that sway with the kelp, for the ground level.
+    if (spec.seagrass) {
+      const sg = spec.seagrass
+      scatterBeside(sg.count, sg.minOff, sg.maxOff, 3, (x, z) => {
+        const tint = pick(rand, sg.palette)
+        const n = 4 + ((rand() * 4) | 0)
+        for (let k = 0; k < n; k++) {
+          const h = 0.9 + rand() * 1.5
+          put(out.blades, out.bladeColors, {
+            p: [x + (rand() - 0.5) * 1.6, gy + h / 2, z + (rand() - 0.5) * 1.6],
+            r: [(rand() - 0.5) * 0.3, rand() * 6, (rand() - 0.5) * 0.3],
+            s: [0.4, h, 1],
           }, tint)
         }
       })
@@ -862,6 +995,10 @@ export default function Scenery() {
         put(out.solid, out.solidColors, { p: [x, gy + 1.4, z], r: [0.12, yaw, 0.18], s: [16, 3, 6] },
           pick(rand, ['#5a3e2a', '#6e4c32', '#4a3426']))
         put(out.metal, out.metalColors, { p: [x, gy + 7, z], r: [0.15, yaw, -0.3], s: [0.5, 15, 0.5] }, '#8a7a60')
+        // a lantern still burning at the bow, and a green glint on the mast top
+        const [lx, lz] = lateralAxis(yaw)
+        const [fx, fz] = forwardAxis(yaw)
+        put(out.glowBalls, out.glowBallColors, { p: [x + fx * 7.4 + lx * 0.4, gy + 3.3, z + fz * 7.4 + lz * 0.4], r: [0, 0, 0], s: [0.9, 0.9, 0.9] }, '#ffcf6b')
       })
     }
 
@@ -876,6 +1013,16 @@ export default function Scenery() {
       ball: new THREE.SphereGeometry(0.5, 8, 6),
       cyl: new THREE.CylinderGeometry(0.5, 0.55, 1, 6),
       arch: new THREE.TorusGeometry(4.4, 0.72, 8, 18),
+      // one-triangle leaf, wide at the root and pointed at the tip (kelp, seagrass)
+      blade: (() => {
+        const g = new THREE.BufferGeometry()
+        g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, -0.5, 0, 0.5, -0.5, 0, 0, 0.5, 0], 3))
+        g.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3))
+        g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2))
+        return g
+      })(),
+      // a coarse bead, for glowing tips and lanterns
+      gem: new THREE.SphereGeometry(0.5, 5, 4),
     }),
     [],
   )
@@ -907,9 +1054,21 @@ export default function Scenery() {
       // self-coloured signs and lamps. Basic so a dark theme still shows them;
       // instance colour tints each one, which a shared emissive cannot.
       glow: new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: true }),
+      // kelp and seagrass: two-sided blades that sway (see litUnderwater)
+      kelp: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8, side: THREE.DoubleSide }),
     }),
     [spec.clouds],
   )
+
+  // Fish Pond only: everything lit by the surface above, rim and caustics
+  const rock = useMemo(() => {
+    if (!THEME.water) return mats.rock
+    const cs = THEME.water.caustics
+    litUnderwater(mat.solid, cs, gy)
+    litUnderwater(mat.white, cs, gy)
+    litUnderwater(mat.kelp, cs, gy, { sway: true })
+    return litUnderwater(mats.rock.clone(), cs, gy)
+  }, [mats, mat, gy])
 
   // Sea: four slabs framing the circuit's own bounding box, so the water starts a
   // fixed distance past the outermost road however long and thin the track is.
@@ -967,10 +1126,10 @@ export default function Scenery() {
         </group>
       )}
       <Shapes items={extra.hills} geometry={geos.hill} material={mat.white} colors={extra.hillColors} />
-      <Shapes items={extra.spires} geometry={geos.hill} material={mats.rock} colors={extra.spireColors} />
+      <Shapes items={extra.spires} geometry={geos.hill} material={rock} colors={extra.spireColors} />
       <Shapes items={extra.snow} geometry={geos.cone} material={mat.snow} colors={extra.snowColors} />
       <Shapes items={extra.dunes} geometry={geos.hill} material={mat.white} colors={extra.duneColors} />
-      <Boxes items={extra.rocks} material={mats.rock} colors={extra.rockColors} castShadow receiveShadow />
+      <Boxes items={extra.rocks} material={rock} colors={extra.rockColors} castShadow receiveShadow />
 
       <Shapes items={extra.trunks} geometry={trunkGeo} material={mat.white} colors={extra.trunkColors} />
       <Shapes items={extra.posts} geometry={geos.cyl} material={mat.white} colors={extra.postColors} />
@@ -983,13 +1142,17 @@ export default function Scenery() {
       <Boxes items={extra.metal} material={mat.metal} colors={extra.metalColors} castShadow />
       <Boxes items={extra.solid} material={mat.solid} colors={extra.solidColors} castShadow />
       <Boxes items={extra.fronds} material={mat.solid} colors={extra.frondColors} />
-      <Boxes items={extra.kelp} material={mat.solid} colors={extra.kelpColors} />
+      <Boxes items={extra.kelp} material={mat.kelp} colors={extra.kelpColors} />
+      <Shapes items={extra.blades} geometry={geos.blade} material={mat.kelp} colors={extra.bladeColors} />
       <Boxes items={extra.banners} material={mat.banner} colors={extra.bannerColors} />
       <Boxes items={extra.glow} material={mat.glow} colors={extra.glowColors} />
       <Boxes items={extra.floods} material={mat.flood} />
 
       <Shapes items={extra.arches} geometry={geos.arch} material={mat.arch} colors={extra.archColors} castShadow />
       <Shapes items={extra.coral} geometry={geos.cyl} material={mat.white} colors={extra.coralColors} />
+      <Shapes items={extra.coralBalls} geometry={geos.ball} material={mat.white} colors={extra.coralBallColors} />
+      <Shapes items={extra.boulders} geometry={geos.ball} material={rock} colors={extra.boulderColors} castShadow receiveShadow />
+      <Shapes items={extra.glowBalls} geometry={geos.gem} material={mat.glow} colors={extra.glowBallColors} />
       <Shapes items={extra.balloons} geometry={geos.ball} material={mat.white} colors={extra.balloonColors} />
       <Shapes items={extra.clouds} geometry={geos.puff} material={mat.cloud} colors={extra.cloudColors} />
     </group>

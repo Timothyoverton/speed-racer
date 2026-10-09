@@ -340,23 +340,40 @@ export const THEMES = {
   // seabed furniture: coral, kelp, rock stacks, a sunken castle, a chest with a
   // gold lid. Fish and bubbles come from the `fish` spec (FishSchool.jsx).
   'fish-pond-7': {
-    sky: { zenith: '#2f9fc4', horizon: '#3aa7bd', sun: '#f2ffff', warm: 0.1, glow: 0.7, stars: 0 },
-    sun: { dir: [-0.1, 0.9, 0.4], color: '#fffbea', intensity: 2.3, disc: '#f7ffff', discSize: 11 },
-    fog: { color: '#3aa7bd', near: 60, far: 650 },
-    hemi: { sky: '#bdf3f5', ground: '#2e6f70', intensity: 0.6 },
+    // encode: true colour-encodes the dome without tone mapping, the way fog is
+    // mixed in, so sand and water meet at one colour instead of a seam. Light comes
+    // from above, so the zenith is the bright end and the horizon the murky one.
+    sky: { zenith: '#33b0cc', horizon: '#1a7f99', sun: '#f2ffff', warm: 0, glow: 0.5, stars: 0, encode: true, surface: 0.4 },
+    sun: { dir: [-0.18, 0.9, 0.32], color: '#e9fff6', intensity: 2.4, disc: '#f7ffff', discSize: 11 },
+    fog: { color: '#1a7f99', near: 35, far: 430 },
+    hemi: { sky: '#aef0f2', ground: '#175e78', intensity: 0.62 },
     env: {
-      sky: '#7fd4dc',
-      ground: '#3b8f93',
+      sky: '#5cc3d6',
+      ground: '#1f7f98',
       groundIntensity: 0.5,
-      sun: '#fff8e0',
+      sun: '#f0ffe8',
       sunIntensity: 7,
-      strip: '#e6fdff',
+      strip: '#d8fdff',
       stripIntensity: 1.8,
-      fill: '#c5f5f8',
+      fill: '#9fe8f2',
       fillIntensity: 1.5,
     },
     exposure: 1.05,
-    ground: { kind: 'sand', color: '#d8c9a0' },
+    ground: { kind: 'sand', color: '#c9b583' },
+    // light shafts, marine snow and sand caustics (Underwater.jsx, Scenery.jsx)
+    water: {
+      shafts: { count: 46, minOff: 14, maxOff: 95, height: 140, color: '#7fe6e0', fadeNear: 90, fadeFar: 330 },
+      snow: { count: 1100, box: 70, size: 0.05, color: '#bff4f0' },
+      caustics: { color: '#c8fff0', strength: 1.1, rim: '#6fe3e6' },
+    },
+    // the road is sand and the wall blocks are reef bommies (Track.jsx, Bommies.jsx)
+    road: 'sand',
+    bommies: {
+      rock: ['#c4a074', '#ae8a62', '#bba384', '#a07f60', '#b09a80', '#c9aa80'],
+      algae: ['#7ca85a', '#8fb55e', '#5f9a76', '#a0b95c'],
+      coral: ['#ff7f8a', '#ff9a5c', '#e56aa8', '#b98cff'],
+      kelp: ['#4f7a2e', '#6b8f3a', '#2f6a44'],
+    },
     scenery: {
       dunes: {
         count: 70,
@@ -368,8 +385,8 @@ export const THEMES = {
         count: 14,
         minOff: 30,
         maxOff: 170,
-        palette: ['#7d8a8c', '#8f9a98', '#6e7b7e', '#a09b8c', '#5f6e70'],
-        caps: ['#b8c2bf', '#a4b0ad', '#c9cfc9', '#8e9a92', '#aab5b0'],
+        palette: ['#9aa8a6', '#aab5b0', '#8a9a98', '#b8b3a0', '#7d8f90'],
+        caps: ['#cfd8d4', '#bcc8c4', '#dde2da', '#a8b6ae', '#c2cdc8'],
       },
       spires: {
         count: 20,
@@ -386,18 +403,33 @@ export const THEMES = {
         palette: ['#ff6f91', '#ff9a6b', '#c77dff', '#ff7aa2', '#ffb347', '#e05d9a', '#8ee3d4'],
       },
       coral: {
-        count: 110,
+        count: 130,
         minOff: 8,
         maxOff: 70,
-        palette: ['#ff6f7a', '#ff8c5a', '#e0609c', '#b98cff', '#ff9f6b', '#f7a1c4'],
+        palette: ['#ff6f7a', '#ff8c5a', '#e0609c', '#b98cff', '#ff9f6b', '#f7a1c4', '#ffd23a', '#5fd6c8'],
+        glow: ['#ffe36b', '#7dfff0', '#ff8ad8', '#9fffa8'],
       },
+      boulders: {
+        count: 48,
+        minOff: 7,
+        maxOff: 90,
+        palette: ['#8f8672', '#7c7464', '#a09580', '#6f7a74', '#8a7a64', '#9a9a8e'],
+      },
+      // hazy reef mounds out in the blue: darker than the water, so the fog turns
+      // them into silhouettes
+      hills: {
+        near: { count: 22, min: 200, span: 160, sink: 8, h0: 0.2, h1: 0.22, palette: ['#2b8ba6', '#2f94ae', '#24788f', '#35a0b4'] },
+        far: { count: 18, min: 330, span: 200, sink: 20, h0: 0.28, h1: 0.3, palette: ['#237f9c', '#2a8aa4', '#1f7690'] },
+      },
+      anemones: { count: 45, minOff: 6, maxOff: 60, palette: ['#7dfff0', '#ff8ad8', '#ffe36b', '#9fffa8', '#b9a0ff'] },
+      seagrass: { count: 140, minOff: 4, maxOff: 45, palette: ['#5f9a3e', '#78ad46', '#3f8a52', '#8fb84c'] },
       kelp: {
         count: 80,
         minOff: 12,
         maxOff: 130,
         hMin: 9,
         hMax: 22,
-        palette: ['#4f7a2e', '#5f8a36', '#3d6b2a', '#6b8f3a', '#7a9a44', '#2f5e34'],
+        palette: ['#4f8a2e', '#6aa03a', '#3d7f3c', '#7fb040', '#9ab94a', '#2f7a4a', '#5fa88a'],
       },
       castles: {
         count: 2,
@@ -408,7 +440,6 @@ export const THEMES = {
       },
       chests: { count: 4, minOff: 9, maxOff: 40 },
       wrecks: { count: 2, minOff: 40, maxOff: 160 },
-      clouds: { count: 10, opacity: 0.16, emissive: '#c8fbff', emissiveIntensity: 0.4 },
     },
     fish: {
       schools: 16,
@@ -417,6 +448,21 @@ export const THEMES = {
       palette: ['#ff8a2a', '#ff6b3d', '#2f7fd8', '#4fc3f7', '#ffd23a', '#ffffff', '#f2f2f2', '#ff4d6d'],
       bigPalette: ['#5b7a8c', '#6d8f7a', '#7f7f8f'],
       bubbles: { columns: 18, perColumn: 6, minOff: 3, maxOff: 21, height: 40 },
+      // a bait ball of small fish turning over the pool, outside the road
+      bait: { q: 1057, lat: 18, up: 8, count: 24, radius: 4.5 },
+    },
+    // a giant clam at every boost pad: the car drives under the open shell
+    clams: {
+      palette: ['#ff8fb8', '#f7c9d9', '#c9a2ff', '#ffb8a0', '#e58ad6'],
+      lip: ['#ff3d8b', '#ff6f91', '#ff5fa2'],
+      openDist: 110, // metres ahead of a clam at which it starts to open
+    },
+    // jellyfish, a whale shark, lures, a rib-cage tunnel and boost bubbles
+    life: {
+      jellies: 8,
+      lures: 22,
+      shark: { period: 40, swoop: 15, reach: 170, height: 10, lead: 12 },
+      ribs: { from: 600, to: 750, every: 10, radius: 13 },
     },
   },
 }

@@ -3,12 +3,19 @@ import { useFrame } from '@react-three/fiber'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
 import Boxes from './Boxes.jsx'
+import Bommies from './Bommies.jsx'
 import { TRACK } from '../game/track.js'
-import { VISUALS } from '../game/trackVisuals.js'
-import { trackMaterials, gateMaterial } from '../game/materials.js'
+import { VISUALS, GROUND_Y } from '../game/trackVisuals.js'
+import { trackMaterials, gateMaterial, sandRoadMaterial } from '../game/materials.js'
+import { THEME } from '../game/themes.js'
 import { getState } from '../game/store.js'
 import { clearCheckpoint, allCheckpointsCleared } from '../game/progress.js'
 import { blip } from '../game/audio.js'
+
+// Fish Pond only (themes.js road: 'sand'): sand for the road and ramp decks, reef
+// bommies for the wall blocks. Everything else is untouched; colliders are the
+// same either way.
+const SAND = THEME.road === 'sand'
 
 const RAIL_H = 0.6 // collider half-height; must stay in step with the visuals
 // The barrier only needs enough length to overlap its neighbour. It must NOT
@@ -76,6 +83,14 @@ function WaterMotion({ fall, pool }) {
 export default function Track({ onFinish }) {
   const finished = useRef(false)
   const mats = useMemo(() => trackMaterials(), [])
+  const roadMat = useMemo(
+    () => (SAND ? sandRoadMaterial('road', [TRACK.roadWidth / 2.5, 2.4], THEME.water.caustics, GROUND_Y + 0.9) : mats.asphalt),
+    [mats],
+  )
+  const deckMat = useMemo(
+    () => (SAND ? sandRoadMaterial('deck', [3, 6], THEME.water.caustics, GROUND_Y + 0.9) : mats.rampTop),
+    [mats],
+  )
   const gateMats = useMemo(
     () => ({
       start: gateMaterial('#66ffbd'),
@@ -101,18 +116,23 @@ export default function Track({ onFinish }) {
           return (
             <group key={i} position={slab.pos} rotation={[slab.rot[0], slab.rot[1], slab.rot[2], 'YXZ']}>
               <CuboidCollider args={[w / 2 + pad, h / 2, l / 2 + pad]} friction={0} restitution={0} />
-              <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + railPad]}
-                position={[rw / 2 + 0.3, h / 2 + RAIL_H, 0]}
-                friction={0}
-                restitution={0.55}
-              />
-              <CuboidCollider
-                args={[0.3, RAIL_H, l / 2 + railPad]}
-                position={[-rw / 2 - 0.3, h / 2 + RAIL_H, 0]}
-                friction={0}
-                restitution={0.55}
-              />
+              {/* a fork leaves the rail open on the side facing the other route */}
+              {!slab.openPos && (
+                <CuboidCollider
+                  args={[0.3, RAIL_H, l / 2 + railPad]}
+                  position={[rw / 2 + 0.3, h / 2 + RAIL_H, 0]}
+                  friction={0}
+                  restitution={0.55}
+                />
+              )}
+              {!slab.openNeg && (
+                <CuboidCollider
+                  args={[0.3, RAIL_H, l / 2 + railPad]}
+                  position={[-rw / 2 - 0.3, h / 2 + RAIL_H, 0]}
+                  friction={0}
+                  restitution={0.55}
+                />
+              )}
             </group>
           )
         })}
@@ -144,7 +164,7 @@ export default function Track({ onFinish }) {
       </RigidBody>
 
       {/* --- visuals: a handful of instanced meshes for the whole circuit --- */}
-      <Boxes items={VISUALS.road} material={mats.asphalt} receiveShadow />
+      <Boxes items={VISUALS.road} material={roadMat} receiveShadow />
       <Boxes items={VISUALS.line} material={mats.line} />
       <Boxes items={VISUALS.dash} material={mats.line} />
       <Boxes items={VISUALS.kerb} material={mats.kerb} receiveShadow />
@@ -158,7 +178,7 @@ export default function Track({ onFinish }) {
       <Boxes items={VISUALS.cliff} colors={VISUALS.cliffColor} material={mats.rock} castShadow receiveShadow />
       <Boxes items={VISUALS.fallWater} material={mats.fallWater} />
       <Boxes items={VISUALS.fallMist} material={mats.mist} />
-      <Boxes items={VISUALS.rampDeck} material={mats.rampTop} castShadow receiveShadow />
+      <Boxes items={VISUALS.rampDeck} material={deckMat} castShadow receiveShadow />
       <Boxes items={VISUALS.rampLine} material={mats.line} />
       <Boxes items={VISUALS.rampDash} material={mats.line} />
       <Boxes items={VISUALS.rampStripe} material={mats.hazard} castShadow />
@@ -167,8 +187,14 @@ export default function Track({ onFinish }) {
       <Sharks pools={TRACK.pools} />
       <Boxes items={VISUALS.boostPad} material={mats.boostPad} />
       <Boxes items={VISUALS.boostArrow} material={mats.boostArrow} />
-      <Boxes items={VISUALS.wallBlock} material={mats.brick} castShadow receiveShadow />
-      <Boxes items={VISUALS.wallStripe} material={mats.hazard} castShadow />
+      {SAND ? (
+        <Bommies />
+      ) : (
+        <>
+          <Boxes items={VISUALS.wallBlock} material={mats.brick} castShadow receiveShadow />
+          <Boxes items={VISUALS.wallStripe} material={mats.hazard} castShadow />
+        </>
+      )}
       <Boxes items={VISUALS.pylon} material={mats.concrete} castShadow receiveShadow />
       <Boxes items={VISUALS.pylonCap} material={mats.concrete} castShadow />
       <Boxes items={VISUALS.hazard} material={mats.hazard} castShadow receiveShadow />

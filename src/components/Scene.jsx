@@ -6,7 +6,10 @@ import * as THREE from 'three'
 import Race from './Race.jsx'
 import Scenery from './Scenery.jsx'
 import FishSchool from './FishSchool.jsx'
+import ClamGates from './ClamGates.jsx'
+import SeaLife from './SeaLife.jsx'
 import SkyDome from './SkyDome.jsx'
+import Underwater from './Underwater.jsx'
 import { useRunId } from '../game/store.js'
 import { BOUNDS } from '../game/trackVisuals.js'
 import { carState } from '../game/carState.js'
@@ -147,6 +150,9 @@ export default function Scene() {
       <SunFollow lightRef={sun} />
       <Scenery />
       {THEME.fish && <FishSchool />}
+      {THEME.water && <Underwater />}
+      {THEME.clams && <ClamGates />}
+      {THEME.life && <SeaLife />}
 
       <Physics timeStep={1 / 60} gravity={[0, -22, 0]} interpolate>
         <Race key={runId} />

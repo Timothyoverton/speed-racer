@@ -36,6 +36,7 @@ class Turtle {
     this.pools = []
     this.ramps = []
     this.falls = []
+    this.forks = [] // tile index ranges of each fork's two routes
     this.start = null
     this.finish = null
   }
@@ -64,7 +65,10 @@ class Turtle {
       // 0 straight, +1 mid-left-hander, -1 mid-right-hander — drives kerbs
       curve,
       dist: this.dist,
+      // the first tile of a fork's second route: NOT joined to the tile before it
+      ...(this._branchStart ? { branchStart: true } : null),
     })
+    this._branchStart = false
     this.dist += len
     this.x += dx * len
     this.z += dz * len
@@ -128,6 +132,51 @@ class Turtle {
     this.z += dz * dist
     this.y -= drop
     this.dist += dist
+    return this
+  }
+
+  // Two roads from the same spot to the same spot. Both routes are walked from
+  // the fork point and must end at the same place, heading and height, so the
+  // trunk carries on from either. Tiles are laid route A, then route B; the
+  // first B tile is flagged `branchStart` so nothing treats it as the next
+  // piece of A. Where the two roads still overlap, the rail on the side facing
+  // the other route is left open so you can slip across (or drive onto) the
+  // other road, instead of hitting an invisible wall.
+  fork(routeA, routeB) {
+    const at = () => ({ x: this.x, y: this.y, z: this.z, heading: this.heading })
+    const from = at()
+    const fromDist = this.dist
+    const n0 = this.tiles.length
+    runCourse(this, routeA)
+    const endA = at()
+    const distA = this.dist
+    const n1 = this.tiles.length
+    Object.assign(this, from)
+    this.dist = fromDist
+    this._branchStart = true
+    runCourse(this, routeB)
+    const endB = at()
+    const off = Math.hypot(endA.x - endB.x, endA.y - endB.y, endA.z - endB.z)
+    if (off > 0.05 || Math.abs(endA.heading - endB.heading) > 1e-6) {
+      throw new Error(`fork routes do not meet: ${off.toFixed(3)}m apart, ${(endA.heading - endB.heading).toFixed(4)}rad`)
+    }
+    this.dist = Math.max(distA, this.dist)
+    const A = this.tiles.slice(n0, n1)
+    const B = this.tiles.slice(n1)
+    this.forks.push({ a: [n0, n1], b: [n1, this.tiles.length] })
+    for (const [mine, other] of [[A, B], [B, A]]) {
+      for (const t of mine) {
+        for (const o of other) {
+          const dx = o.pos[0] - t.pos[0]
+          const dz = o.pos[2] - t.pos[2]
+          if (Math.hypot(dx, dz) > this.w + 4) continue
+          // which side of this tile the other road is on (local +x is the left)
+          const lateral = dx * Math.cos(t.rot[1]) - dz * Math.sin(t.rot[1])
+          if (lateral > 0) t.openPos = true
+          else t.openNeg = true
+        }
+      }
+    }
     return this
   }
 
@@ -265,8 +314,7 @@ class Turtle {
   }
 }
 
-function buildTrack({ id, name, roadWidth, medals, course }) {
-  const t = new Turtle(roadWidth)
+function runCourse(t, course) {
   for (const [cmd, a, b, c, d] of course) {
     if (cmd === 'start') t.markStart()
     else if (cmd === 'finish') t.markFinish()
@@ -281,7 +329,13 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     else if (cmd === 'stuntramp') t.stuntRamp(a, b, c, d)
     else if (cmd === 'waterfall') t.waterfall(a)
     else if (cmd === 'turn') t.turn(a, b)
+    else if (cmd === 'fork') t.fork(a, b)
   }
+}
+
+function buildTrack({ id, name, roadWidth, medals, course }) {
+  const t = new Turtle(roadWidth)
+  runCourse(t, course)
   return {
     id,
     name,
@@ -297,6 +351,7 @@ function buildTrack({ id, name, roadWidth, medals, course }) {
     pools: t.pools,
     ramps: t.ramps,
     falls: t.falls,
+    forks: t.forks,
     start: t.start,
     finish: t.finish,
     length: t.dist,
@@ -308,7 +363,10 @@ function mergeTiles(tiles) {
   const slabs = []
   let run = null
   const sameOrient = (a, b) =>
-    Math.abs(a.pitch - b.pitch) < 1e-6 && Math.abs(a.rot[1] - b.rot[1]) < 1e-6
+    Math.abs(a.pitch - b.pitch) < 1e-6 &&
+    Math.abs(a.rot[1] - b.rot[1]) < 1e-6 &&
+    !!a.openPos === !!b.openPos &&
+    !!a.openNeg === !!b.openNeg
 
   // Matching orientation is NOT enough to merge: two straights either side of a
   // `gap` are perfectly parallel, and merging them would span the void with one
@@ -368,6 +426,8 @@ function mergeTiles(tiles) {
       // how many tiles this slab covers — 1 means it's a lone arc chord that
       // needs extra collider overlap to keep the surface seamless
       span: s.tiles.length,
+      openPos: !!first.openPos,
+      openNeg: !!first.openNeg,
       pitch,
       atGap: !!(s.gapBefore || s.gapAfter),
     }
@@ -782,11 +842,14 @@ const MISSION_IMPOSSIBLE = buildTrack({
 // between them is flat, with corners of 110m and up so the wide sweepers can be
 // taken without lifting much. On the 20m road the slalom blocks leave a lane
 // open on the far side, so it is a lane choice rather than a thread.
+// Every boost pad is a giant clam gate (ClamGates.jsx): the drive-through is the
+// reward, so each one sits mid-straight, 40m or more clear of any bend, jump,
+// wall or set piece.
 const FISH_POND = buildTrack({
   id: 'fish-pond-7',
   name: 'Fish Pond',
   roadWidth: 20,
-  medals: medalsFromAuthor(55), // placeholder until measured with real laps
+  medals: medalsFor(58), // autopilot clean lap (either route); re-measure with a real lap
   course: [
     ['start'],
     ['straight', 40],
@@ -802,10 +865,11 @@ const FISH_POND = buildTrack({
     ['turn', 60, 110],
     ['straight', 30],
     ['turn', -60, 120],
-    ['straight', 50],
+    ['straight', 45],
+    ['boost'], // clam gate, mid-straight
+    ['straight', 45],
 
     // THE SLALOM — coral blocks alternating sides, 60m apart
-    ['straight', 40],
     ['wall', 3.5, 8, 2.4],
     ['straight', 60],
     ['wall', -3.5, 8, 2.4],
@@ -827,13 +891,52 @@ const FISH_POND = buildTrack({
     ['straight', 60],
     ['checkpoint'],
 
-    // THE TREASURE DROP — the big one, down into the deep end
+    // THE FORK — the road splits in two and meets again at the bottom of the tank.
+    // Left is the Coral Bypass: sweeping S-bends and a long, gentle slide down.
+    // Straight on is THE TRENCH: Freefall's biggest kicker and long drop, then
+    // THE EDGE, where the road just falls away under you. Same start, same
+    // finish, same depth; the Trench pays out boost pads for the nerve.
     ['boost'],
-    ['straight', 46],
-    ['jump', 30, 7.0],
-    ['gap', 72, 26],
-    ['ramp', 90, -16],
-    ['straight', 110],
+    ['straight', 60],
+    [
+      'fork',
+      [
+        ['turn', 30, 120],
+        ['turn', -30, 120],
+        ['ramp', 200, -23],
+        ['ramp', 206, -22.6],
+        ['turn', -30, 120],
+        ['turn', 30, 120],
+      ],
+      [
+        ['straight', 120],
+        ['boost'], // burn runs over the climb and the kicker
+        ['straight', 30],
+        ['ramp', 40, 4.5],
+        ['jump', 32, 6.9],
+        ['ramp', 104, -24],
+        ['straight', 50],
+        ['boost'], // and another down the long run-out, into the Edge
+        ['straight', 55],
+        ['jump', 45, -20],
+        ['ramp', 70, -13],
+        ['straight', 50],
+        ['boost'], // the Trench pays out a second pad on the way out
+        ['straight', 50],
+      ],
+    ],
+    ['straight', 40],
+
+    // THE REEF WEAVE — two wide sweepers back to back, with a clam gate mid-way
+    // along each straight between them
+    ['turn', 40, 120],
+    ['straight', 45],
+    ['boost'],
+    ['straight', 45],
+    ['turn', -40, 120],
+    ['straight', 45],
+    ['boost'],
+    ['straight', 45],
     ['finish'],
   ],
 })

@@ -14,6 +14,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { THEME } from '../game/themes.js'
+import { UW, CAUSTIC_GLSL, causticMap } from '../game/materials.js'
 
 const VS = /* glsl */ `
   varying vec3 vDir;
@@ -24,6 +25,7 @@ const VS = /* glsl */ `
 `
 
 const FS = /* glsl */ `
+  ${CAUSTIC_GLSL}
   uniform vec3 uZenith;
   uniform vec3 uHorizon;
   uniform vec3 uSun;
@@ -31,6 +33,8 @@ const FS = /* glsl */ `
   uniform float uWarm;
   uniform float uGlow;
   uniform float uStars;
+  uniform float uSurface;
+  uniform float uTime;
   varying vec3 vDir;
 
   float hash13(vec3 p) {
@@ -57,11 +61,22 @@ const FS = /* glsl */ `
       float spark = smoothstep(0.972, 0.995, n) * (0.35 + 0.65 * tw);
       col += vec3(0.82, 0.88, 1.0) * spark * smoothstep(0.0, 0.22, d.y);
     }
+    // Underwater: the surface seen from below, a lattice of moving light that
+    // fades out toward the horizon.
+    if (uSurface > 0.0 && d.y > 0.12) {
+      float fade = smoothstep(0.12, 0.5, d.y);
+      col += uSun * caustic(d.xz / d.y * 0.35, uTime * 0.6) * uSurface * fade;
+    }
     gl_FragColor = vec4(col, 1.0);
     // Night: run the dome through the same tone-map + encode as the ground, or
     // the fogged horizon (tone-mapped, so lighter) shows as a slab against it.
     #ifdef SKY_TONED
       #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    #endif
+    // Fog is mixed in after tone mapping, so a dome that has to meet fogged ground
+    // exactly is only colour-encoded, never tone mapped.
+    #ifdef SKY_ENCODED
       #include <colorspace_fragment>
     #endif
   }
@@ -81,6 +96,9 @@ export default function SkyDome() {
       uWarm: { value: sky.warm },
       uGlow: { value: sky.glow },
       uStars: { value: sky.stars },
+      uSurface: { value: sky.surface || 0 },
+      uTime: UW.time,
+      uCaustic: { value: sky.surface ? causticMap() : null },
     }),
     [sky, sunDir],
   )
@@ -101,7 +119,7 @@ export default function SkyDome() {
           depthWrite={false}
           fog={false}
           toneMapped={!!sky.tone}
-          defines={sky.tone ? { SKY_TONED: 1 } : {}}
+          defines={sky.tone ? { SKY_TONED: 1 } : sky.encode ? { SKY_ENCODED: 1 } : {}}
           uniforms={uniforms}
         />
       </mesh>
