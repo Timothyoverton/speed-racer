@@ -49,6 +49,7 @@ const SHAFT_VS = /* glsl */ `
 
 const SHAFT_FS = /* glsl */ `
   uniform vec3 uColor;
+  uniform vec3 uColor2;
   uniform float uTime;
   uniform float uNear;
   uniform float uFar;
@@ -65,7 +66,9 @@ const SHAFT_FS = /* glsl */ `
     a *= 0.65 + 0.35 * sin(uTime * 0.55 + vSeed * 40.0 + up * 3.0);
     // no fog on additive light, so fade by distance by hand (and from the lens)
     a *= (1.0 - smoothstep(uNear, uFar, vDist)) * smoothstep(4.0, 26.0, vDist);
-    gl_FragColor = vec4(uColor * a * (0.55 + 0.9 * vSeed), 1.0);
+    // a few shafts run warm (sunlit green) instead of the same aqua
+    vec3 col = mix(uColor, uColor2, smoothstep(0.55, 0.92, vSeed));
+    gl_FragColor = vec4(col * a * (0.5 + 0.85 * vSeed), 1.0);
   }
 `
 
@@ -77,6 +80,7 @@ const SNOW_VS = /* glsl */ `
   uniform float uBox;
   uniform float uSize;
   varying float vA;
+  varying float vWarm;
   void main() {
     vec3 drift = vec3(sin(uTime * 0.21 + aSeed.w * 30.0) * 0.6, -0.35 - aSeed.w * 0.3, cos(uTime * 0.17 + aSeed.w * 21.0) * 0.6);
     vec3 world = aSeed.xyz * uBox + drift * uTime;
@@ -86,16 +90,20 @@ const SNOW_VS = /* glsl */ `
     gl_PointSize = clamp(uSize * (0.6 + aSeed.w) * 320.0 / max(-mv.z, 1.0), 1.5, 14.0);
     float edge = 1.0 - smoothstep(0.35, 0.5, length(rel) / uBox);
     vA = edge * smoothstep(1.5, 8.0, -mv.z) * (0.4 + 0.6 * aSeed.w);
+    vWarm = aSeed.w;
   }
 `
 
 const SNOW_FS = /* glsl */ `
   uniform vec3 uColor;
+  uniform vec3 uColor2;
   varying float vA;
+  varying float vWarm;
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float a = (1.0 - smoothstep(0.35, 1.0, d)) * vA;
-    gl_FragColor = vec4(uColor * a, 1.0);
+    vec3 col = mix(uColor, uColor2, smoothstep(0.62, 1.0, vWarm));
+    gl_FragColor = vec4(col * a, 1.0);
   }
 `
 
@@ -142,6 +150,7 @@ export default function Underwater() {
       fog: false,
       uniforms: {
         uColor: { value: new THREE.Color(spec.shafts.color) },
+        uColor2: { value: new THREE.Color(spec.shafts.color2 || spec.shafts.color) },
         uTime: UW.time,
         uNear: { value: spec.shafts.fadeNear },
         uFar: { value: spec.shafts.fadeFar },
@@ -180,6 +189,7 @@ export default function Underwater() {
       fog: false,
       uniforms: {
         uColor: { value: new THREE.Color(spec.snow.color) },
+        uColor2: { value: new THREE.Color(spec.snow.color2 || spec.snow.color) },
         uTime: UW.time,
         uBox: { value: spec.snow.box },
         uSize: { value: spec.snow.size },

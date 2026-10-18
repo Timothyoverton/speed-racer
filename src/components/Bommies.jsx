@@ -70,6 +70,8 @@ function rockBody(a, b, c, seed, pal, rand) {
   const base2 = new THREE.Color(pal.rock[(rand() * pal.rock.length) | 0])
   const algae = new THREE.Color(pal.algae[(rand() * pal.algae.length) | 0])
   const coral = new THREE.Color(pal.coral[(rand() * pal.coral.length) | 0])
+  // second fleck colour from the seed, so the extra hue doesn't shift the rock
+  const coral2 = new THREE.Color(pal.coral[Math.abs(seed * 3 + 1) % pal.coral.length])
   for (let i = 0; i < pos.count; i++) {
     const ux = pos.getX(i) / a
     const uy = pos.getY(i) / b
@@ -89,8 +91,11 @@ function rockBody(a, b, c, seed, pal, rand) {
     c1.copy(base1).lerp(base2, m)
     const hi = Math.max(0, qy)
     const algaeAmt = Math.max(0, Math.min(1, (hi - 0.15) * 1.6 + (noise3(qx * a * 0.9, 1, qz * c * 0.9, seed + 9) - 0.5) * 0.9))
-    c1.lerp(algae, algaeAmt * 0.4)
-    if (noise3(qx * a * 1.7, qy * b * 1.7, qz * c * 1.7, seed + 13) > 0.86) c1.lerp(coral, 0.6)
+    c1.lerp(algae, algaeAmt * 0.58)
+    if (noise3(qx * a * 1.7, qy * b * 1.7, qz * c * 1.7, seed + 13) > 0.8) {
+      const fleck = noise3(qx * a * 2.3, qy * b * 0.4, qz * c * 2.3, seed + 29) > 0.55 ? coral2 : coral
+      c1.lerp(fleck, 0.72)
+    }
     c1.multiplyScalar(0.8 + 0.4 * noise3(qx * a * 3.1, qy * b * 3.1, qz * c * 3.1, seed + 17))
     const dark = 0.7 + 0.3 * Math.min(1, (qy + 1) * 0.7)
     out.copy(c1).multiplyScalar(dark)
@@ -159,12 +164,12 @@ function buildBommies(pal) {
       const y = Math.min(wh - r * sy * 0.9, r * sy * 0.6 + rand() * (wh - r * sy * 1.6))
       g.translate(x, Math.max(r * sy * 0.5, y), z)
       const pickc = rand()
-      const hex = pickc < 0.07 ? pal.coral[(rand() * pal.coral.length) | 0] : pickc < 0.2 ? pal.algae[(rand() * pal.algae.length) | 0] : pal.rock[(rand() * pal.rock.length) | 0]
+      const hex = pickc < 0.14 ? pal.coral[(rand() * pal.coral.length) | 0] : pickc < 0.32 ? pal.algae[(rand() * pal.algae.length) | 0] : pal.rock[(rand() * pal.rock.length) | 0]
       local.push(tinted(g, hex, 0.8 + rand() * 0.35))
     }
 
     // tufts on the crown: coral fingers and kelp blades
-    const tufts = 2 + ((rand() * 3) | 0)
+    const tufts = 3 + ((rand() * 3) | 0)
     for (let t = 0; t < tufts; t++) {
       const x = (rand() - 0.5) * 2 * (a - 0.6)
       const z = (rand() - 0.5) * 2 * Math.max(0, c - 0.5)
@@ -178,6 +183,11 @@ function buildBommies(pal) {
           g.rotateZ((rand() - 0.5) * 0.7)
           g.translate(x + (rand() - 0.5) * 0.4, y + len * 0.4, z + (rand() - 0.5) * 0.4)
           local.push(tinted(g, hex))
+        }
+        if (rand() < 0.45) {
+          const tip = new THREE.SphereGeometry(0.14 + rand() * 0.08, 6, 5)
+          tip.translate(x, y + 0.9, z)
+          local.push(tinted(tip, hex, 1.2))
         }
       } else {
         const hex = pal.kelp[(rand() * pal.kelp.length) | 0]

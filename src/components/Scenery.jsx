@@ -181,8 +181,10 @@ function sandUnderwater(mat, spec) {
         float wNear = 1.0 - smoothstep(30.0, 170.0, wDist);
         vec2 wp = vWorld.xz;
         float wPatch = sin(wp.x * 0.021 + sin(wp.y * 0.017) * 2.0) * sin(wp.y * 0.026 + sin(wp.x * 0.013) * 2.0);
-        diffuseColor.rgb *= 1.0 + 0.12 * wPatch;
+        diffuseColor.rgb *= 1.0 + 0.16 * wPatch;
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.82, 0.92, 0.98), smoothstep(0.1, 0.8, wPatch));
+        float algae = smoothstep(0.42, 0.9, wPatch) * (0.5 + 0.5 * sin(wp.x * 0.031 + wp.y * 0.017));
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.74, 1.06, 0.8), algae * 0.45);
         float ripple = 0.5 + 0.5 * sin(2.7 * (wp.x * 0.92 + wp.y * 0.38 + 2.6 * sin(wp.x * 0.07) * sin(wp.y * 0.055)));
         diffuseColor.rgb *= 1.0 - 0.1 * ripple * wNear;`,
       )
@@ -284,8 +286,49 @@ export default function Scenery() {
         const x = tile.pos[0] + lx * side * dist + fx * along
         const z = tile.pos[2] + lz * side * dist + fz * along
         if (blocked(x, z, clearance)) continue
-        if (fn(x, z, yaw, tile) === false) continue
+        if (fn(x, z, yaw, tile, side) === false) continue
         i++
+      }
+    }
+
+    // Seeds marched around the lap, then a few mates beside each one, so a
+    // species clumps without leaving a whole straight bare. Mates step mostly
+    // outward; blocked() still rejects anything that drifts onto the ribbon.
+    // `colony.phase` (0..1) staggers species so their clumps don't stack.
+    function scatterColonies(count, minOff, maxOff, clearance, colony, fn) {
+      const tiles = TRACK.tiles
+      const mates = colony.mates ?? 2
+      const spread = colony.spread ?? 10
+      const phase = colony.phase || 0
+      const seeds = []
+      for (let i = 0, tries = 0; i < count && tries < count * 30; tries++) {
+        const jitter = (rand() - 0.5) * Math.max(6, (tiles.length / Math.max(count, 1)) * 0.65)
+        let idx = Math.round((phase + (i + 0.5) / count) * tiles.length + jitter)
+        idx = ((idx % tiles.length) + tiles.length) % tiles.length
+        const tile = tiles[idx]
+        const yaw = tile.rot[1]
+        const [lx, lz] = lateralAxis(yaw)
+        const [fx, fz] = forwardAxis(yaw)
+        const side = rand() < 0.5 ? 1 : -1
+        const dist = TRACK.roadWidth / 2 + minOff + rand() * (maxOff - minOff)
+        const along = (rand() - 0.5) * 18
+        const x = tile.pos[0] + lx * side * dist + fx * along
+        const z = tile.pos[2] + lz * side * dist + fz * along
+        if (blocked(x, z, clearance)) continue
+        if (fn(x, z, yaw, tile, true) === false) continue
+        seeds.push({ x, z, yaw, tile, lx, lz, fx, fz, side })
+        i++
+      }
+      for (const s of seeds) {
+        const n = (rand() * (mates + 1)) | 0
+        for (let m = 0; m < n; m++) {
+          const along = (rand() - 0.5) * spread
+          const outward = (rand() * 0.85 - 0.15) * spread
+          const x = s.x + s.lx * s.side * outward + s.fx * along
+          const z = s.z + s.lz * s.side * outward + s.fz * along
+          if (blocked(x, z, clearance)) continue
+          fn(x, z, s.yaw, s.tile, false)
+        }
       }
     }
 
@@ -385,12 +428,19 @@ export default function Scenery() {
 
     if (spec.scrub) {
       const s = spec.scrub
-      const place = (x, z) => {
-        const w = s.round ? 1.4 + rand() * 2.2 : 0.9 + rand() * 1.7
+      let family = null
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        const w0 = s.round ? 1.4 + rand() * 2.2 : 0.9 + rand() * 1.7
+        const w = mate ? w0 * (0.65 + rand() * 0.3) : w0
         const h = s.round ? w * (0.7 + rand() * 0.35) : w * 0.8
-        put(out.scrub, out.scrubColors, { p: [x, gy + h * 0.35, z], r: [0, rand() * 3, 0], s: [w, h, w] }, pick(rand, s.palette))
+        const tint = mate && family && rand() < 0.8 ? family : pick(rand, s.palette)
+        if (!mate) family = tint
+        const squash = mate ? 0.85 + rand() * 0.3 : 1
+        put(out.scrub, out.scrubColors, { p: [x, gy + h * 0.35, z], r: [0, rand() * 3, 0], s: [w, h, w * squash] }, tint)
       }
-      if (s.minOff != null) scatterBeside(s.count, s.minOff, s.maxOff, s.clear, place)
+      if (s.colony) scatterColonies(s.count, s.minOff, s.maxOff, s.clear, s.colony, place)
+      else if (s.minOff != null) scatterBeside(s.count, s.minOff, s.maxOff, s.clear, place)
       else scatterDisc(s.count, R * 1.15, s.clear, place)
     }
 
@@ -430,27 +480,50 @@ export default function Scenery() {
     if (spec.mesas) {
       const m = spec.mesas
       scatterBeside(m.count, m.minOff, m.maxOff, 10, (x, z) => {
-        const w = 14 + rand() * 32
-        const d = 12 + rand() * 26
-        const h = 7 + rand() * 22
-        if (blocked(x, z, Math.hypot(w, d) * 0.5 + 6)) return false
+        const w = m.low ? 16 + rand() * 26 : 14 + rand() * 32
+        const d = m.low ? 12 + rand() * 22 : 12 + rand() * 26
+        const h = m.low ? 4.5 + rand() * 9 : 7 + rand() * 22
+        const reach = Math.hypot(w, d) * 0.5 * (m.skirt ? 1.3 : 1) + 6
+        if (blocked(x, z, reach)) return false
         const yaw = rand() * Math.PI
-        put(out.rocks, out.rockColors, { p: [x, gy + h * 0.32, z], r: [0, yaw, 0], s: [w, h, d] }, pick(rand, m.palette))
+        const body = pick(rand, m.palette)
+        put(out.rocks, out.rockColors, { p: [x, gy + h * 0.32, z], r: [0, yaw, 0], s: [w, h, d] }, body)
         put(out.rocks, out.rockColors, {
           p: [x, gy + h * 0.32 + h * 0.46, z], r: [0, yaw + 0.2, 0], s: [w * 0.7, h * 0.18, d * 0.7],
         }, pick(rand, m.caps))
+        if (m.skirt) {
+          put(out.rocks, out.rockColors, {
+            p: [x, gy + h * 0.1, z], r: [0, yaw + 0.4, 0], s: [w * 1.28, h * 0.22, d * 1.18],
+          }, body)
+        }
       })
     }
 
     if (spec.spires) {
       const s = spec.spires
-      scatterBeside(s.count, s.minOff, s.maxOff, 8, (x, z) => {
+      scatterBeside(s.count, s.minOff, s.maxOff, 8, (x, z, yaw, _tile, side) => {
         const w = 4 + rand() * 8
         const h = 14 + rand() * 28
         if (blocked(x, z, w * 0.5 + 4)) return false
+        const tint = pick(rand, s.palette)
         put(out.spires, out.spireColors, {
           p: [x, gy + h * 0.35, z], r: [0, rand() * 3, 0], s: [w, h, w * (0.7 + rand() * 0.4)],
-        }, pick(rand, s.palette))
+        }, tint)
+        if (s.cluster && rand() < 0.7) {
+          const [lx, lz] = lateralAxis(yaw)
+          const [fx, fz] = forwardAxis(yaw)
+          const outward = 6 + rand() * 10
+          const along = (rand() - 0.5) * 14
+          const ox = lx * side * outward + fx * along
+          const oz = lz * side * outward + fz * along
+          const w2 = w * (0.32 + rand() * 0.28)
+          const h2 = h * (0.4 + rand() * 0.45)
+          if (!blocked(x + ox, z + oz, w2 * 0.5 + 4)) {
+            put(out.spires, out.spireColors, {
+              p: [x + ox, gy + h2 * 0.35, z + oz], r: [0, rand() * 3, 0], s: [w2, h2, w2 * (0.7 + rand() * 0.35)],
+            }, rand() < 0.6 ? tint : pick(rand, s.palette))
+          }
+        }
       })
     }
 
@@ -487,24 +560,96 @@ export default function Scenery() {
     if (spec.hills) {
       const placeRing = (ring) => {
         if (!ring) return
+        const far = ring === spec.hills.far
         for (let i = 0, tries = 0; i < ring.count && tries < ring.count * 12; tries++) {
           const a = rand() * Math.PI * 2
-          const rad = Math.max(ring.min, R + 80) + rand() * ring.span
-          const sz = 120 + rand() * (ring === spec.hills.far ? 340 : 220)
+          // `past` is metres beyond the circuit bounds. Without it, the ring
+          // starts just outside the track, which is what every other theme uses.
+          const inner = ring.past != null ? R + ring.past : Math.max(ring.min, R + 80)
+          const rad = inner + rand() * ring.span
+          const sz0 = ring.size ? ring.size[0] : 120
+          const sz1 = ring.size ? ring.size[1] : far ? 340 : 220
+          const sz = sz0 + rand() * sz1
           const x = cx + Math.cos(a) * rad
           const z = cz + Math.sin(a) * rad
           // cone radius is half the scale (ConeGeometry is authored at r=0.5)
           if (blocked(x, z, sz * 0.5 + 10)) continue
+          const yaw = rand() * 6
+          // `lift` adds height without another random draw, so other themes
+          // keep the same sequence. Fish Pond uses it to put peaks up in the haze.
+          const sy = sz * (ring.h0 + rand() * ring.h1) + (ring.lift || 0)
+          const szZ = ring.size ? sz * (0.75 + rand() * 0.4) : sz
           put(out.hills, out.hillColors, {
             p: [x, gy - ring.sink, z],
-            r: [0, rand() * 6, 0],
-            s: [sz, sz * (ring.h0 + rand() * ring.h1), sz],
+            r: [0, yaw, 0],
+            s: [sz, sy, szZ],
           }, pick(rand, ring.palette))
+          // a shoulder further from the circuit, so a mound isn't one cone
+          if (ring.shoulder && rand() < 0.7) {
+            const shove = sz * (0.2 + rand() * 0.12)
+            const ox = Math.cos(a) * shove
+            const oz = Math.sin(a) * shove
+            const s2 = sz * (0.4 + rand() * 0.22)
+            if (!blocked(x + ox, z + oz, s2 * 0.5 + 8)) {
+              put(out.hills, out.hillColors, {
+                p: [x + ox, gy - ring.sink * 0.65, z + oz],
+                r: [0, yaw + 0.5, 0],
+                s: [s2, sy * (0.5 + rand() * 0.28), s2 * (0.8 + rand() * 0.25)],
+              }, pick(rand, ring.palette))
+            }
+          }
           i++
         }
       }
       placeRing(spec.hills.near)
+      placeRing(spec.hills.mid)
       placeRing(spec.hills.far)
+    }
+
+    // Reef mounds and stone arches in the band beside the road, far enough
+    // out that the ring clears the ribbon (blocked() checks the arch radius).
+    if (spec.reefs) {
+      const rf = spec.reefs
+      scatterBeside(rf.mounds, rf.minOff, rf.maxOff, 14, (x, z) => {
+        const w = 12 + rand() * 18
+        const d = 9 + rand() * 14
+        const h = 5 + rand() * 11
+        if (blocked(x, z, Math.hypot(w, d) * 0.5 + 8)) return false
+        const yaw = rand() * Math.PI
+        const rock = pick(rand, rf.rock)
+        put(out.rocks, out.rockColors, { p: [x, gy + h * 0.28, z], r: [0, yaw, 0], s: [w, h, d] }, rock)
+        put(out.rocks, out.rockColors, {
+          p: [x, gy + h * 0.72, z], r: [0, yaw + 0.25, 0], s: [w * 0.58, h * 0.24, d * 0.58],
+        }, pick(rand, rf.caps))
+        if (rand() < 0.55) {
+          const sw = 2.2 + rand() * 2.2
+          const sh = h * (0.85 + rand() * 0.7)
+          const px = x + (rand() - 0.5) * w * 0.25
+          const pz = z + (rand() - 0.5) * d * 0.25
+          if (!blocked(px, pz, sw * 0.5 + 2)) {
+            put(out.spires, out.spireColors, {
+              p: [px, gy + sh * 0.35, pz],
+              r: [0, yaw, 0],
+              s: [sw, sh, sw * 0.8],
+            }, rock)
+          }
+        }
+      })
+      scatterBeside(rf.arches, rf.minOff + 12, rf.maxOff + 20, 18, (x, z, yaw) => {
+        const sc = 3.4 + rand() * 2.2
+        // torus radius 4.4 plus the tube, so the ring can't lean onto the road
+        const reach = 5.2 * sc
+        if (blocked(x, z, reach + 6)) return false
+        const tint = pick(rand, rf.arch)
+        put(out.arches, out.archColors, {
+          p: [x, gy + reach * (0.74 + rand() * 0.16), z],
+          r: [0, yaw + (rand() < 0.5 ? 0 : Math.PI / 2), 0],
+          s: [sc, sc, sc * (0.72 + rand() * 0.35)],
+        }, tint)
+        put(out.rocks, out.rockColors, {
+          p: [x, gy + 1.1, z], r: [0, yaw, 0], s: [reach * 0.85, 2.2, reach * 0.32],
+        }, tint)
+      })
     }
 
     if (spec.clouds) {
@@ -804,135 +949,195 @@ export default function Scenery() {
     // rises past an elevated road is fine: it's kelp, and it's meant to be tall.
     if (spec.kelp) {
       const k = spec.kelp
-      scatterBeside(k.count, k.minOff, k.maxOff, 6, (x, z) => {
-        const stalks = 3 + ((rand() * 3) | 0)
-        const tint = pick(rand, k.palette)
+      let family = null
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        if (!mate) family = pick(rand, k.palette)
+        const tint = mate && family && rand() < 0.84 ? family : pick(rand, k.palette)
+        const stalks = (mate ? 2 : 4) + ((rand() * 3) | 0)
+        const spread = mate ? 3.2 : 5.2
         for (let s = 0; s < stalks; s++) {
-          const sx = x + (rand() - 0.5) * 4.5
-          const sz = z + (rand() - 0.5) * 4.5
-          const h = k.hMin + rand() * (k.hMax - k.hMin)
-          const lean = (rand() - 0.5) * 0.2
+          const sx = x + (rand() - 0.5) * spread
+          const sz = z + (rand() - 0.5) * spread
+          if (blocked(sx, sz, 2)) continue
+          const h = k.hMin + rand() * (k.hMax - k.hMin) * (mate ? 0.75 : 1)
+          const lean = (rand() - 0.5) * 0.25
+          const stalkTint = rand() < 0.72 ? tint : pick(rand, k.palette)
           put(out.kelp, out.kelpColors, {
-            p: [sx, gy + h / 2, sz], r: [lean, rand() * 6, lean * 0.5], s: [0.4, h, 0.4],
-          }, tint)
-          // a pair of crossed blades at mid-height, so a stalk reads as a plant
+            p: [sx, gy + h / 2, sz], r: [lean, rand() * 6, lean * 0.5], s: [0.35 + rand() * 0.15, h, 0.35 + rand() * 0.15],
+          }, stalkTint)
+          // crossed blades up the stalk, so it reads as a plant
           for (let b = 0; b < 3; b++) {
             put(out.blades, out.bladeColors, {
-              p: [sx, gy + h * (0.25 + b * 0.22) + 1.2, sz],
-              r: [0, rand() * 6, (b % 2 ? 1 : -1) * 0.35],
-              s: [0.95, 2.4, 1],
-            }, tint)
+              p: [sx, gy + h * (0.22 + b * 0.24) + 0.8, sz],
+              r: [0, rand() * 6, (b % 2 ? 1 : -1) * (0.28 + rand() * 0.16)],
+              s: [0.7 + rand() * 0.5, 1.8 + rand() * 1.3, 1],
+            }, stalkTint)
           }
         }
-      })
+      }
+      if (k.colony) scatterColonies(k.count, k.minOff, k.maxOff, 6, k.colony, place)
+      else scatterBeside(k.count, k.minOff, k.maxOff, 6, place)
     }
 
     // Branching coral: a fan of stubby columns from one base, each tilted a
     // different way, so a head reads as coral from a car's height.
-    // Four kinds, so the reef isn't one shape in six colours: branching fingers
-    // with glowing tips, brain-coral domes, sea fans on a stalk, tube sponges.
+    // Five kinds, and a colony keeps one colour and one kind so a patch reads
+    // as a garden: fingers, brain domes, sea fans, tube sponges, table coral.
     if (spec.coral) {
       const c = spec.coral
       const glowTip = (x, y, z, r) =>
-        put(out.glowBalls, out.glowBallColors, { p: [x, y, z], r: [0, 0, 0], s: [r, r, r] }, pick(rand, c.glow))
-      scatterBeside(c.count, c.minOff, c.maxOff, 4, (x, z) => {
-        const tint = pick(rand, c.palette)
-        const kind = rand()
-        if (kind < 0.46) {
-          const lit = rand() < 0.4
-          const branches = 4 + ((rand() * 3) | 0)
+        put(out.glowBalls, out.glowBallColors, { p: [x, y, z], r: [0, 0, 0], s: [r, r * (0.75 + rand() * 0.5), r] }, pick(rand, c.glow))
+      let family = null
+      let kindRoll = 0
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        if (!mate) {
+          family = pick(rand, c.palette)
+          kindRoll = rand()
+        }
+        const tint = mate && family && rand() < 0.78 ? family : pick(rand, c.palette)
+        const kind = !mate ? kindRoll : rand() < 0.7 ? kindRoll : rand()
+        if (kind < 0.36) {
+          const lit = rand() < 0.62
+          const branches = 4 + ((rand() * 4) | 0)
           for (let b = 0; b < branches; b++) {
-            const len = 2.2 + rand() * 3.6
-            const thick = 0.45 + rand() * 0.45
-            const e = new THREE.Euler((rand() - 0.5) * 0.9, rand() * 6, (rand() - 0.5) * 0.9, 'YXZ')
+            const len = 1.8 + rand() * 3.8
+            const thick = 0.38 + rand() * 0.5
+            const e = new THREE.Euler((rand() - 0.5) * 0.95, rand() * 6, (rand() - 0.5) * 0.95, 'YXZ')
             const d = new THREE.Vector3(0, 1, 0).applyEuler(e)
             put(out.coral, out.coralColors, {
               p: [x + (d.x * len) / 2, gy + (d.y * len) / 2, z + (d.z * len) / 2],
               r: [e.x, e.y, e.z],
-              s: [thick, len, thick],
-            }, tint)
-            if (lit) glowTip(x + d.x * len, gy + d.y * len + thick * 0.2, z + d.z * len, thick * 1.1)
+              s: [thick, len, thick * (0.75 + rand() * 0.4)],
+            }, rand() < 0.8 ? tint : pick(rand, c.palette))
+            if (lit && rand() < 0.7) glowTip(x + d.x * len, gy + d.y * len + thick * 0.15, z + d.z * len, thick * (0.7 + rand() * 0.7))
           }
-        } else if (kind < 0.7) {
-          const n = 1 + ((rand() * 3) | 0)
+        } else if (kind < 0.56) {
+          const n = 2 + ((rand() * 3) | 0)
           for (let k = 0; k < n; k++) {
-            const w = 1.6 + rand() * 2.4
+            const w = 1.4 + rand() * 2.6
             put(out.coralBalls, out.coralBallColors, {
-              p: [x + (rand() - 0.5) * 2.6, gy + w * 0.04, z + (rand() - 0.5) * 2.6],
+              p: [x + (rand() - 0.5) * 2.8, gy + w * 0.05, z + (rand() - 0.5) * 2.8],
               r: [0, rand() * 6, 0],
-              s: [w, w * (0.34 + rand() * 0.18), w],
-            }, k ? pick(rand, c.palette) : tint)
+              s: [w, w * (0.28 + rand() * 0.22), w * (0.8 + rand() * 0.35)],
+            }, k && rand() < 0.4 ? pick(rand, c.palette) : tint)
           }
-        } else if (kind < 0.86) {
-          const h = 2.4 + rand() * 2.8
+        } else if (kind < 0.72) {
+          const h = 2.2 + rand() * 3.2
           const yaw = rand() * 3
-          put(out.coral, out.coralColors, { p: [x, gy + h * 0.28, z], r: [0, 0, 0], s: [0.2, h * 0.56, 0.2] }, tint)
-          put(out.coralBalls, out.coralBallColors, { p: [x, gy + h * 0.76, z], r: [0, yaw, 0], s: [h * 0.95, h * 0.8, 0.14] }, pick(rand, c.palette))
-        } else {
-          const n = 3 + ((rand() * 3) | 0)
+          put(out.coral, out.coralColors, { p: [x, gy + h * 0.28, z], r: [0, 0, 0], s: [0.18, h * 0.56, 0.18] }, tint)
+          put(out.coralBalls, out.coralBallColors, {
+            p: [x, gy + h * 0.76, z], r: [0, yaw, 0], s: [h * (0.7 + rand() * 0.4), h * 0.75, 0.12 + rand() * 0.08],
+          }, rand() < 0.7 ? tint : pick(rand, c.palette))
+        } else if (kind < 0.88) {
+          const n = 3 + ((rand() * 4) | 0)
           for (let k = 0; k < n; k++) {
-            const len = 1.3 + rand() * 2.2
-            const th = 0.6 + rand() * 0.4
-            const sx = x + (rand() - 0.5) * 2
-            const sz = z + (rand() - 0.5) * 2
+            const len = 1.2 + rand() * 2.4
+            const th = 0.5 + rand() * 0.45
+            const sx = x + (rand() - 0.5) * 2.2
+            const sz = z + (rand() - 0.5) * 2.2
+            if (blocked(sx, sz, 1.5)) continue
             put(out.coral, out.coralColors, { p: [sx, gy + len / 2, sz], r: [0, 0, 0], s: [th, len, th] }, tint)
-            if (rand() < 0.5) glowTip(sx, gy + len + 0.05, sz, th * 0.75)
+            if (rand() < 0.55) glowTip(sx, gy + len + 0.05, sz, th * (0.45 + rand() * 0.4))
+          }
+        } else {
+          const w = 2.2 + rand() * 2.6
+          put(out.coralBalls, out.coralBallColors, {
+            p: [x, gy + w * 0.1, z], r: [0, rand() * 6, 0], s: [w, w * 0.2, w * (0.7 + rand() * 0.3)],
+          }, tint)
+          const n = 4 + ((rand() * 3) | 0)
+          for (let f = 0; f < n; f++) {
+            const len = 0.55 + rand() * 0.9
+            const ang = (f / n) * Math.PI * 2 + rand() * 0.3
+            const sx = x + Math.cos(ang) * w * 0.28
+            const sz = z + Math.sin(ang) * w * 0.28
+            const e = new THREE.Euler((rand() - 0.5) * 0.5, ang, (rand() - 0.5) * 0.5, 'YXZ')
+            const d = new THREE.Vector3(0, 1, 0).applyEuler(e)
+            put(out.coral, out.coralColors, {
+              p: [sx + (d.x * len) / 2, gy + w * 0.18 + (d.y * len) / 2, sz + (d.z * len) / 2],
+              r: [e.x, e.y, e.z],
+              s: [0.26, len, 0.26],
+            }, rand() < 0.65 ? tint : pick(rand, c.palette))
+            if (rand() < 0.4) glowTip(sx + d.x * len, gy + w * 0.18 + d.y * len, sz + d.z * len, 0.22 + rand() * 0.16)
           }
         }
-      })
+      }
+      if (c.colony) scatterColonies(c.count, c.minOff, c.maxOff, 4, c.colony, place)
+      else scatterBeside(c.count, c.minOff, c.maxOff, 4, place)
     }
 
     // Boulders in loose groups: lumpy ellipsoids half sunk in the sand, so the
     // seabed has rock at ground level and not only soaring mesas.
     if (spec.boulders) {
       const bo = spec.boulders
-      scatterBeside(bo.count, bo.minOff, bo.maxOff, 5, (x, z) => {
-        const n = 2 + ((rand() * 3) | 0)
-        const base = pick(rand, bo.palette)
+      let family = null
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        if (!mate) family = pick(rand, bo.palette)
+        const base = mate && family && rand() < 0.75 ? family : pick(rand, bo.palette)
+        const n = (mate ? 1 : 2) + ((rand() * 3) | 0)
         for (let k = 0; k < n; k++) {
-          const w = 1.4 + rand() * 3.6
-          const bx = x + (rand() - 0.5) * 5
-          const bz = z + (rand() - 0.5) * 5
+          const w = 1.3 + rand() * (mate ? 2.4 : 3.8)
+          const bx = x + (rand() - 0.5) * (mate ? 3.5 : 5.5)
+          const bz = z + (rand() - 0.5) * (mate ? 3.5 : 5.5)
           if (blocked(bx, bz, w * 0.6 + 2)) continue
           put(out.boulders, out.boulderColors, {
             p: [bx, gy + w * 0.12, bz], r: [(rand() - 0.5) * 0.4, rand() * 6, (rand() - 0.5) * 0.4],
-            s: [w, w * (0.5 + rand() * 0.35), w * (0.7 + rand() * 0.4)],
+            s: [w, w * (0.45 + rand() * 0.4), w * (0.65 + rand() * 0.45)],
           }, k ? pick(rand, bo.palette) : base)
         }
-      })
+      }
+      if (bo.colony) scatterColonies(bo.count, bo.minOff, bo.maxOff, 5, bo.colony, place)
+      else scatterBeside(bo.count, bo.minOff, bo.maxOff, 5, place)
     }
 
     // Glowing sea-pens: a thin stalk with a bright bulb, in small colonies.
     if (spec.anemones) {
       const an = spec.anemones
-      scatterBeside(an.count, an.minOff, an.maxOff, 4, (x, z) => {
-        const tint = pick(rand, an.palette)
-        const n = 3 + ((rand() * 4) | 0)
+      const stalks = ['#58786a', '#6a8874', '#4a6e60', '#7a9080']
+      let family = null
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        if (!mate) family = pick(rand, an.palette)
+        const tint = mate && family && rand() < 0.8 ? family : pick(rand, an.palette)
+        const n = (mate ? 2 : 4) + ((rand() * 4) | 0)
         for (let k = 0; k < n; k++) {
-          const h = 1.2 + rand() * 2.2
-          const sx = x + (rand() - 0.5) * 3.2
-          const sz = z + (rand() - 0.5) * 3.2
-          put(out.kelp, out.kelpColors, { p: [sx, gy + h / 2, sz], r: [0, 0, 0], s: [0.1, h, 0.1] }, '#58786a')
-          put(out.glowBalls, out.glowBallColors, { p: [sx, gy + h, sz], r: [0, 0, 0], s: [0.45, 0.45, 0.45] }, tint)
+          const h = 1.1 + rand() * (mate ? 1.6 : 2.4)
+          const bulb = 0.28 + rand() * 0.38
+          const sx = x + (rand() - 0.5) * (mate ? 2.2 : 3.6)
+          const sz = z + (rand() - 0.5) * (mate ? 2.2 : 3.6)
+          if (blocked(sx, sz, 1.5)) continue
+          put(out.kelp, out.kelpColors, { p: [sx, gy + h / 2, sz], r: [0, 0, 0], s: [0.08 + rand() * 0.06, h, 0.08 + rand() * 0.06] }, pick(rand, stalks))
+          put(out.glowBalls, out.glowBallColors, { p: [sx, gy + h, sz], r: [0, 0, 0], s: [bulb, bulb * (0.8 + rand() * 0.35), bulb] }, rand() < 0.25 ? pick(rand, an.palette) : tint)
         }
-      })
+      }
+      if (an.colony) scatterColonies(an.count, an.minOff, an.maxOff, 4, an.colony, place)
+      else scatterBeside(an.count, an.minOff, an.maxOff, 4, place)
     }
 
     // Seagrass: low clumps of blades that sway with the kelp, for the ground level.
     if (spec.seagrass) {
       const sg = spec.seagrass
-      scatterBeside(sg.count, sg.minOff, sg.maxOff, 3, (x, z) => {
-        const tint = pick(rand, sg.palette)
-        const n = 4 + ((rand() * 4) | 0)
+      let family = null
+      const place = (x, z, _yaw, _tile, isSeed) => {
+        const mate = isSeed === false
+        if (!mate) family = pick(rand, sg.palette)
+        const tint = mate && family && rand() < 0.86 ? family : pick(rand, sg.palette)
+        const n = (mate ? 3 : 6) + ((rand() * (mate ? 4 : 5)) | 0)
+        const spread = mate ? 1.3 : 2.1
         for (let k = 0; k < n; k++) {
-          const h = 0.9 + rand() * 1.5
+          const h = (mate ? 0.7 : 0.9) + rand() * (mate ? 1.2 : 1.8)
+          const blade = rand() < 0.8 ? tint : pick(rand, sg.palette)
           put(out.blades, out.bladeColors, {
-            p: [x + (rand() - 0.5) * 1.6, gy + h / 2, z + (rand() - 0.5) * 1.6],
-            r: [(rand() - 0.5) * 0.3, rand() * 6, (rand() - 0.5) * 0.3],
-            s: [0.4, h, 1],
-          }, tint)
+            p: [x + (rand() - 0.5) * spread, gy + h / 2, z + (rand() - 0.5) * spread],
+            r: [(rand() - 0.5) * 0.35, rand() * 6, (rand() - 0.5) * 0.35],
+            s: [0.28 + rand() * 0.28, h, 1],
+          }, blade)
         }
-      })
+      }
+      if (sg.colony) scatterColonies(sg.count, sg.minOff, sg.maxOff, 3, sg.colony, place)
+      else scatterBeside(sg.count, sg.minOff, sg.maxOff, 3, place)
     }
 
     // A sunken castle: a keep, four corner towers with cone roofs, a battlemented
@@ -1067,6 +1272,7 @@ export default function Scenery() {
     litUnderwater(mat.solid, cs, gy)
     litUnderwater(mat.white, cs, gy)
     litUnderwater(mat.kelp, cs, gy, { sway: true })
+    litUnderwater(mat.arch, cs, gy)
     return litUnderwater(mats.rock.clone(), cs, gy)
   }, [mats, mat, gy])
 
