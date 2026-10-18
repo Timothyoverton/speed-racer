@@ -138,15 +138,18 @@ export default function Track({ onFinish }) {
         })}
 
         {/* Stunt ramps — tilted slabs you drive up. */}
+        {/* Yaw first, then pitch ('YXZ', like the slabs and the visuals). A bare
+            rotation={[-pitch, yaw, 0]} is XYZ order, which pitches about the WORLD
+            X axis: on any ramp not facing +z that rolls the slab sideways and
+            leaves one half of it blocked by a step. */}
         {TRACK.ramps.map((r, i) => (
-          <CuboidCollider
-            key={`ramp${i}`}
-            args={[r.size[0] / 2, r.size[1] / 2, r.size[2] / 2]}
-            position={r.pos}
-            rotation={[-r.pitch, r.yaw, 0]}
-            friction={0}
-            restitution={0}
-          />
+          <group key={`ramp${i}`} position={r.pos} rotation={[-r.pitch, r.yaw, 0, 'YXZ']}>
+            <CuboidCollider
+              args={[r.size[0] / 2, r.size[1] / 2, r.size[2] / 2]}
+              friction={0}
+              restitution={0}
+            />
+          </group>
         ))}
 
         {/* Wall blocks. Solid and barely bouncy: hitting one should end your
