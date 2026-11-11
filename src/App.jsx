@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import Scene from './components/Scene.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Hud from './components/Hud.jsx'
 import Menu from './components/Menu.jsx'
 import Lobby from './components/Lobby.jsx'
@@ -32,7 +33,9 @@ export default function App() {
 
   return (
     <>
-      <Scene />
+      <ErrorBoundary>
+        <Scene />
+      </ErrorBoundary>
       {showHud && <Hud />}
       {showHud && touch && <TouchControls />}
       {phase === 'menu' && <Menu />}
