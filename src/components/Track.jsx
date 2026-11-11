@@ -6,7 +6,6 @@ import Boxes from './Boxes.jsx'
 import Bommies from './Bommies.jsx'
 import { TRACK } from '../game/track.js'
 import { VISUALS, GROUND_Y } from '../game/trackVisuals.js'
-import { useQuality } from '../game/perf.js'
 import { trackMaterials, gateMaterial, sandRoadMaterial } from '../game/materials.js'
 import { THEME } from '../game/themes.js'
 import { getState } from '../game/store.js'
@@ -92,14 +91,13 @@ export default function Track({ onFinish }) {
     () => (SAND ? sandRoadMaterial('deck', [3, 6], THEME.water.caustics, GROUND_Y + 0.9) : mats.rampTop),
     [mats],
   )
-  const { fx } = useQuality()
   const gateMats = useMemo(
     () => ({
-      start: gateMaterial('#66ffbd', fx),
-      cp: gateMaterial('#ffc94a', fx),
-      finish: gateMaterial('#ffffff', fx),
+      start: gateMaterial('#66ffbd'),
+      cp: gateMaterial('#ffc94a'),
+      finish: gateMaterial('#ffffff'),
     }),
-    [fx],
+    [],
   )
 
   return (

@@ -8,8 +8,7 @@ import { THEME } from '../game/themes.js'
 import { carState } from '../game/carState.js'
 
 // The grade: bloom on the things that should glow, ACES tone mapping, then a
-// split-tone colour grade and a vignette. Switched on by the quality tier
-// (perf.js) — Low runs the plain renderer, with its own tone mapping.
+// split-tone colour grade and a vignette. Always on.
 //
 // While this is mounted the composer takes over tone mapping from the renderer
 // (it parks gl.toneMapping at None and puts it back on unmount). Everything is
@@ -84,14 +83,11 @@ function gradeFor(theme) {
   return { ...DEFAULT_GRADE, ...g, bloom: { ...DEFAULT_GRADE.bloom, ...(g.bloom || {}) } }
 }
 
-export default function PostFx({ bloom }) {
+export default function PostFx() {
   const grade = useMemo(() => gradeFor(THEME), [])
   const effect = useMemo(() => new GradeEffect(grade), [grade])
   const bloomRef = useRef(null)
-  useEffect(() => {
-    if (import.meta.env.DEV) window.__fx = effect
-    return () => effect.dispose()
-  }, [effect])
+  useEffect(() => () => effect.dispose(), [effect])
 
   // boost: a touch more glow and a tighter frame while it burns
   const k = useRef(0)
@@ -104,18 +100,14 @@ export default function PostFx({ bloom }) {
 
   return (
     <EffectComposer multisampling={4} enableNormalPass={false} frameBufferType={grade.tone === false ? UnsignedByteType : undefined}>
-      {bloom ? (
-        <Bloom
-          ref={bloomRef}
-          mipmapBlur
-          intensity={grade.bloom.intensity}
-          luminanceThreshold={grade.bloom.threshold}
-          luminanceSmoothing={grade.bloom.smoothing}
-          radius={grade.bloom.radius}
-        />
-      ) : (
-        <></>
-      )}
+      <Bloom
+        ref={bloomRef}
+        mipmapBlur
+        intensity={grade.bloom.intensity}
+        luminanceThreshold={grade.bloom.threshold}
+        luminanceSmoothing={grade.bloom.smoothing}
+        radius={grade.bloom.radius}
+      />
       {grade.tone !== false ? <ToneMapping mode={ToneMappingMode.ACES_FILMIC} /> : <></>}
       <primitive object={effect} />
     </EffectComposer>

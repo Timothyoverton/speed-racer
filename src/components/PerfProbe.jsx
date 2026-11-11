@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { perf, recordFrame, frameStats, currentTier, TIERS } from '../game/perf.js'
+import { perf, recordFrame, frameStats } from '../game/perf.js'
 
 // Frame-time probe plus a hidden readout. Toggle with the ` key, or open the
 // page with ?perf. It records every frame into a ring buffer (no React state in
@@ -22,10 +22,9 @@ function gpuName(gl) {
 function report() {
   const s = frameStats()
   if (!s) return 'no frames yet'
-  const t = TIERS[currentTier()]
   return [
     `GPU ${perf.gpu}`,
-    `buffer ${perf.buffer}   quality ${t.name}   fx ${t.fx ? (t.bloom ? 'bloom+grade' : 'grade') : 'off'}`,
+    `buffer ${perf.buffer}`,
     `frame ms  mean ${s.mean.toFixed(1)}  median ${s.median.toFixed(1)}  p99 ${s.p99.toFixed(1)}  => ${s.fps.toFixed(0)} fps`,
     `draw calls ${perf.calls}   triangles ${perf.triangles}   geometries ${perf.geometries}   textures ${perf.textures}`,
   ].join('\n')

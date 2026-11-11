@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
 import { Environment, Lightformer, PerformanceMonitor, AdaptiveDpr } from '@react-three/drei'
@@ -14,7 +14,6 @@ import { useRunId } from '../game/store.js'
 import { BOUNDS } from '../game/trackVisuals.js'
 import { carState } from '../game/carState.js'
 import { THEME } from '../game/themes.js'
-import { useQuality, stepAutoTier } from '../game/perf.js'
 import PerfProbe from './PerfProbe.jsx'
 import PostFx from './PostFx.jsx'
 import { displayColor } from '../game/fxColor.js'
@@ -48,17 +47,16 @@ function SunFollow({ lightRef }) {
 export default function Scene() {
   const runId = useRunId()
   const sun = useRef(null)
-  // quality tier (perf.js): sets the pixel-ratio ceiling and, later, which
-  // post effects run. Auto mode steps down when the frame rate sags (two game
-  // instances on one GPU, a weak phone, a heavy launch). 1.5 is the normal cap
-  // — a retina panel at full dpr renders ~1.8x the pixels for no visible gain
-  // on this low-poly art.
-  const quality = useQuality()
+  // pixel-ratio ceiling, dropped automatically when the frame rate sags (two
+  // game instances on one GPU, a weak phone, a heavy launch). 1.5 is the normal
+  // cap — a retina panel at full dpr renders ~1.8x the pixels for no visible
+  // gain on this low-poly art.
+  const [dprMax, setDprMax] = useState(1.5)
 
   return (
     <Canvas
       shadows
-      dpr={[1, quality.dpr]}
+      dpr={[1, dprMax]}
       camera={{ fov: 62, near: 0.3, far: 2600, position: [0, 8, -14] }}
       onCreated={(s) => {
         if (import.meta.env.DEV) window.__three = s
@@ -71,21 +69,21 @@ export default function Scene() {
       }}
     >
       <PerformanceMonitor
-        onDecline={() => stepAutoTier(-1)}
-        onIncline={() => stepAutoTier(1)}
+        onDecline={() => setDprMax(1)}
+        onIncline={() => setDprMax(1.5)}
         flipflops={3}
-        onFallback={() => stepAutoTier(-1)}
+        onFallback={() => setDprMax(0.75)}
       />
       <PerfProbe />
       <AdaptiveDpr pixelated />
-      <color attach="background" args={[displayColor(THEME.sky.horizon, THEME, quality.fx)]} />
+      <color attach="background" args={[displayColor(THEME.sky.horizon, THEME, true)]} />
       {/* Haze tinted to this track's horizon, so distance reads as depth.
           The colour is the sky horizon (themes.js keeps them as one string):
           a distant hill fades into the sky behind it instead of into a
           slightly different blue. */}
-      <fog attach="fog" args={[displayColor(THEME.fog.color, THEME, quality.fx), THEME.fog.near, THEME.fog.far]} />
+      <fog attach="fog" args={[displayColor(THEME.fog.color, THEME, true), THEME.fog.near, THEME.fog.far]} />
 
-      <SkyDome fx={quality.fx} />
+      <SkyDome fx />
 
       <Environment resolution={128} frames={1} background={false}>
         <mesh scale={120}>
@@ -166,8 +164,8 @@ export default function Scene() {
 
       {/* Bloom on the emissive gate lights, brake lights and sun highlights, then
           a colour grade and a gentle vignette to sit the picture down at the
-          edges. Off on the Low tier. */}
-      {quality.fx && <PostFx bloom={quality.bloom} />}
+          edges. */}
+      <PostFx />
     </Canvas>
   )
 }

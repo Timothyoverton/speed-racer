@@ -5,7 +5,6 @@ import { bestTime, bestTopSpeed, topTimes, getName, setName, medalFor } from '..
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import { initAudio } from '../game/audio.js'
 import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.js'
-import { useQuality, setQualitySetting } from '../game/perf.js'
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
 import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
@@ -19,7 +18,6 @@ export default function Menu() {
   const [colour, setColour] = useState(getCarColourId)
   const [ctrl, setCtrl] = useState(touchModeSetting)
   const [music, setMusic] = useState(isMusicEnabled)
-  const quality = useQuality()
   const [recent] = useState(recentOpponents)
   const pb = bestTime(TRACK.id)
   const board = topTimes(TRACK.id)
@@ -136,19 +134,6 @@ export default function Menu() {
                 setTouchMode(v)
                 setCtrl(v)
               }}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-
-        <div className="colours">
-          <span className="label">Graphics</span>
-          {[['auto', 'Auto'], ['low', 'Low'], ['medium', 'Med'], ['high', 'High']].map(([v, lbl]) => (
-            <button
-              key={v}
-              className={'ctrlmode' + (v === quality.setting ? ' active' : '')}
-              onClick={() => setQualitySetting(v)}
             >
               {lbl}
             </button>
