@@ -16,6 +16,8 @@ import { carState } from '../game/carState.js'
 import { THEME } from '../game/themes.js'
 import { useQuality, stepAutoTier } from '../game/perf.js'
 import PerfProbe from './PerfProbe.jsx'
+import PostFx from './PostFx.jsx'
+import { displayColor } from '../game/fxColor.js'
 
 const [cx, , cz] = BOUNDS.center
 
@@ -76,14 +78,14 @@ export default function Scene() {
       />
       <PerfProbe />
       <AdaptiveDpr pixelated />
-      <color attach="background" args={[THEME.sky.horizon]} />
+      <color attach="background" args={[displayColor(THEME.sky.horizon, THEME, quality.fx)]} />
       {/* Haze tinted to this track's horizon, so distance reads as depth.
           The colour is the sky horizon (themes.js keeps them as one string):
           a distant hill fades into the sky behind it instead of into a
           slightly different blue. */}
-      <fog attach="fog" args={[THEME.fog.color, THEME.fog.near, THEME.fog.far]} />
+      <fog attach="fog" args={[displayColor(THEME.fog.color, THEME, quality.fx), THEME.fog.near, THEME.fog.far]} />
 
-      <SkyDome />
+      <SkyDome fx={quality.fx} />
 
       <Environment resolution={128} frames={1} background={false}>
         <mesh scale={120}>
@@ -162,8 +164,10 @@ export default function Scene() {
         <Race key={runId} />
       </Physics>
 
-      {/* Bloom on the emissive gate lights, brake lights and sun highlights;
-          a gentle vignette to sit the picture down at the edges. */}
+      {/* Bloom on the emissive gate lights, brake lights and sun highlights, then
+          a colour grade and a gentle vignette to sit the picture down at the
+          edges. Off on the Low tier. */}
+      {quality.fx && <PostFx bloom={quality.bloom} />}
     </Canvas>
   )
 }

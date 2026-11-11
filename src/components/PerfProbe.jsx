@@ -65,19 +65,30 @@ export default function PerfProbe() {
     }
   }, [gl])
 
+  // the composer renders several passes a frame; without this renderer.info
+  // would only ever show the last one
+  useEffect(() => {
+    const info = gl.info
+    info.autoReset = false
+    return () => {
+      info.autoReset = true
+    }
+  }, [gl])
+
   const acc = useRef(0)
   useFrame((state, dt) => {
     recordFrame(dt)
     acc.current += dt
+    const info = state.gl.info
     if (acc.current > 1) {
       acc.current = 0
-      const info = state.gl.info
       perf.calls = info.render.calls
       perf.triangles = info.render.triangles
       perf.geometries = info.memory.geometries
       perf.textures = info.memory.textures
       perf.buffer = `${state.gl.domElement.width}x${state.gl.domElement.height}`
     }
+    info.reset()
   })
   return null
 }

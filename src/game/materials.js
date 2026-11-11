@@ -429,11 +429,14 @@ export function trackMaterials() {
   return cache
 }
 
-export function gateMaterial(color) {
+// The plain renderer blends in gamma space; the post-processing composer blends in
+// linear light, where the same translucent glow lands about three times brighter
+// over a dark scene. `fx` pulls the emissive back so the curtain reads the same.
+export function gateMaterial(color, fx = false) {
   return new THREE.MeshStandardMaterial({
     color,
     emissive: color,
-    emissiveIntensity: 1.6,
+    emissiveIntensity: fx ? 0.07 : 1.6,
     transparent: true,
     opacity: 0.16,
     side: THREE.DoubleSide,

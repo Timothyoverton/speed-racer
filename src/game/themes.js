@@ -360,6 +360,8 @@ export const THEMES = {
       fillIntensity: 1.55,
     },
     exposure: 1.05,
+    // custom shader materials already carry the final colours: grade only, no tone mapping
+    grade: { tone: false, shadow: '#e6f4f4', high: '#fff2de', split: 0.4, contrast: 0.14, vignette: 0.3, bloom: { intensity: 0.5, threshold: 0.8 } },
     ground: { kind: 'sand', color: '#d2c198' },
     // light shafts, marine snow and sand caustics (Underwater.jsx, Scenery.jsx)
     // caustics stay as they were: the sand road reads them too

@@ -14,6 +14,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { THEME } from '../game/themes.js'
+import { displayColor } from '../game/fxColor.js'
 import { UW, CAUSTIC_GLSL, causticMap } from '../game/materials.js'
 
 const VS = /* glsl */ `
@@ -82,15 +83,18 @@ const FS = /* glsl */ `
   }
 `
 
-export default function SkyDome() {
+// fx: the post-processing composer is running, so the dome is left linear like
+// everything else and tone-mapped with it; the encode/tone tricks are for the
+// plain renderer path only.
+export default function SkyDome({ fx = false }) {
   const group = useRef(null)
   const sky = THEME.sky
   const sunDir = THEME.sun.dir
 
   const uniforms = useMemo(
     () => ({
-      uZenith: { value: new THREE.Color(sky.zenith) },
-      uHorizon: { value: new THREE.Color(sky.horizon) },
+      uZenith: { value: displayColor(sky.zenith, THEME, fx) },
+      uHorizon: { value: displayColor(sky.horizon, THEME, fx) },
       uSun: { value: new THREE.Color(sky.sun) },
       uSunDir: { value: new THREE.Vector3(...sunDir) },
       uWarm: { value: sky.warm },
@@ -100,7 +104,7 @@ export default function SkyDome() {
       uTime: UW.time,
       uCaustic: { value: sky.surface ? causticMap() : null },
     }),
-    [sky, sunDir],
+    [sky, sunDir, fx],
   )
 
   // sky is at infinity: keep it centred on the camera every frame
@@ -118,8 +122,9 @@ export default function SkyDome() {
           side={THREE.BackSide}
           depthWrite={false}
           fog={false}
-          toneMapped={!!sky.tone}
-          defines={sky.tone ? { SKY_TONED: 1 } : sky.encode ? { SKY_ENCODED: 1 } : {}}
+          key={fx ? 'fx' : 'plain'}
+          toneMapped={!fx && !!sky.tone}
+          defines={fx ? {} : sky.tone ? { SKY_TONED: 1 } : sky.encode ? { SKY_ENCODED: 1 } : {}}
           uniforms={uniforms}
         />
       </mesh>
