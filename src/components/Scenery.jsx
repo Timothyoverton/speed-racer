@@ -210,6 +210,7 @@ export default function Scenery() {
 
   const ground = useMemo(() => {
     const g = THEME.ground
+    if (THEME.surfaces?.ground) return mats.grass
     if (g.kind === 'grass') {
       mats.grass.color.set(g.color)
       return mats.grass

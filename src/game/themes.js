@@ -84,8 +84,10 @@ export const THEMES = {
   // Open, fast, coastal. High sun, pale sand, a sea ringing the land, and a few
   // wind-bent palms instead of a forest.
   'long-ribbon-1': {
-    sky: { zenith: '#3e8fe2', horizon: '#d4eef8', sun: '#fff6dc', warm: 0.35, glow: 1, stars: 0 },
-    sun: { dir: [-0.22, 0.8, 0.56], color: '#fff8ec', intensity: 2.55, disc: '#fffdf4', discSize: 12 },
+    sky: { zenith: '#3e8fe2', horizon: '#d4eef8', sun: '#fff6dc', warm: 0.35, glow: 1, stars: 0,
+      photo: { env: 'sky/kloofendal_1k.hdr', map: 'sky/kloofendal_sky_4k.jpg', sunDir: [0.554, 0.742, 0.377], horizon: [0.442, 0.475, 0.576], yaw: -1.348, gain: 1, envIntensity: 1 },
+    },
+    sun: { dir: [-0.245, 0.742, 0.624], color: '#fff8ec', intensity: 3.2, disc: '#fffdf4', discSize: 12 },
     fog: { color: '#d4eef8', near: 780, far: 2400 },
     hemi: { sky: '#e5f5ff', ground: '#3d6e68', intensity: 0.62 },
     env: {
@@ -100,6 +102,12 @@ export const THEMES = {
       fillIntensity: 1.6,
     },
     exposure: 1.05,
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+      ground: { set: 'aerial_beach_01', tile: 6, macro: 0.7, mean: 0.248, tint: '#fff4dc', envMapIntensity: 0.5 },
+    },
     ground: { kind: 'sand', color: '#d8c690' },
     scenery: {
       sea: { inner: 70, color: '#2f93cc', shallow: '#78cfd6' },
@@ -128,14 +136,15 @@ export const THEMES = {
       hills: {
         far: { count: 10, min: 1300, span: 400, sink: 40, h0: 0.12, h1: 0.08, palette: ['#9ebcc8', '#a9c6d0', '#8eb0bc', '#b7d0da'] },
       },
-      clouds: { count: 26, opacity: 0.4, emissive: '#e7f4ff', emissiveIntensity: 0.3 },
     },
   },
 
   // Qiddiya: sandstone, a low golden sun, and a dry haze that eats the mesas.
   'qiddiya-rush-2': {
-    sky: { zenith: '#3d6fbe', horizon: '#e4c49a', sun: '#ffb15a', warm: 0.7, glow: 1, stars: 0 },
-    sun: { dir: [0.86, 0.18, 0.47], color: '#ffc27a', intensity: 2.5, disc: '#ffe0a8', discSize: 15 },
+    sky: { zenith: '#3d6fbe', horizon: '#e4c49a', sun: '#ffb15a', warm: 0.7, glow: 1, stars: 0,
+      photo: { env: 'sky/qwantani_late_1k.hdr', map: 'sky/qwantani_late_sky_4k.jpg', sunDir: [-0.7633, 0.327, -0.5571], horizon: [0.86, 0.842, 0.774], yaw: 3.272, gain: 1.7, envIntensity: 1.4 },
+    },
+    sun: { dir: [0.829, 0.327, 0.453], color: '#ffc27a', intensity: 3.4, disc: '#ffe0a8', discSize: 15 },
     fog: { color: '#e4c49a', near: 280, far: 1500 },
     hemi: { sky: '#ffd7a8', ground: '#8a5a32', intensity: 0.5 },
     env: {
@@ -150,6 +159,12 @@ export const THEMES = {
       fillIntensity: 1.3,
     },
     exposure: 1.06,
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+      ground: { set: 'aerial_beach_01', tile: 6, macro: 0.7, mean: 0.248, tint: '#f2c690', envMapIntensity: 0.5 },
+    },
     ground: { kind: 'sand', color: '#d2b074' },
     scenery: {
       scrub: {
@@ -190,14 +205,15 @@ export const THEMES = {
           palette: ['#c4a07a', '#b89070', '#d4b48c', '#a88868'],
         },
       },
-      clouds: { count: 8, opacity: 0.18, emissive: '#f0ddc0', emissiveIntensity: 0.15 },
     },
   },
 
   // High alpine. Cool, bright, thin haze so the peaks stay readable a long way out.
   'freefall-3': {
-    sky: { zenith: '#79b4f0', horizon: '#d7e6f4', sun: '#f7fbff', warm: 0.15, glow: 1, stars: 0 },
-    sun: { dir: [-0.32, 0.78, 0.54], color: '#f4f8ff', intensity: 2.35, disc: '#ffffff', discSize: 12 },
+    sky: { zenith: '#79b4f0', horizon: '#d7e6f4', sun: '#f7fbff', warm: 0.15, glow: 1, stars: 0,
+      photo: { env: 'sky/kloofendal_1k.hdr', map: 'sky/kloofendal_sky_4k.jpg', sunDir: [0.554, 0.742, 0.377], horizon: [0.442, 0.475, 0.576], yaw: -1.508, gain: 1, envIntensity: 1 },
+    },
+    sun: { dir: [-0.342, 0.742, 0.576], color: '#f4f8ff', intensity: 3.0, disc: '#ffffff', discSize: 12 },
     fog: { color: '#d7e6f4', near: 880, far: 2400 },
     hemi: { sky: '#eaf3ff', ground: '#c5d2e0', intensity: 0.66 },
     env: {
@@ -212,6 +228,12 @@ export const THEMES = {
       fillIntensity: 1.7,
     },
     exposure: 1.05,
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+      ground: { set: 'snow_02', tile: 6, macro: 0.5, mean: 0.386, envMapIntensity: 0.6 },
+    },
     ground: { kind: 'snow', color: '#e3ebf3' },
     scenery: {
       forest: {
@@ -222,6 +244,16 @@ export const THEMES = {
         palette: ['#1c3c28', '#244832', '#163224', '#2c5438', '#1a3828'],
         snowPalette: ['#f4f7fb', '#e4eaf2', '#f7f8f6', '#d5dee8', '#eef3ea'],
         bark: ['#4a4038', '#5c5148', '#3a332e', '#6a5c50'],
+        model: {
+          species: [
+            { preset: 'Pine Medium', seed: 4107 },
+            { preset: 'Pine Large', seed: 911 },
+            { preset: 'Pine Medium', seed: 2718 },
+          ],
+          height: [10, 22],
+          fullWithin: 60,
+          tints: ['#ffffff', '#e2ece8', '#cfdcd8', '#eef4f0'],
+        },
       },
       scrub: {
         count: 180,
@@ -255,14 +287,15 @@ export const THEMES = {
           snow: ['#f4f8fc', '#e6eef7', '#ffffff'],
         },
       },
-      clouds: { count: 18, opacity: 0.42, emissive: '#f4f8ff', emissiveIntensity: 0.35 },
     },
   },
 
   // Theme park at the end of the afternoon: banners, towers, inflatable arches.
   'stunt-park-4': {
-    sky: { zenith: '#3d6ed2', horizon: '#f0c7a4', sun: '#ffb060', warm: 1, glow: 1, stars: 0 },
-    sun: { dir: [-0.64, 0.26, 0.72], color: '#ffd0a0', intensity: 2.75, disc: '#ffe6c0', discSize: 14 },
+    sky: { zenith: '#3d6ed2', horizon: '#f0c7a4', sun: '#ffb060', warm: 1, glow: 1, stars: 0,
+      photo: { env: 'sky/qwantani_late_1k.hdr', map: 'sky/qwantani_late_sky_4k.jpg', sunDir: [-0.7633, 0.327, -0.5571], horizon: [0.86, 0.842, 0.774], yaw: 1.475, gain: 1.7, envIntensity: 1.4 },
+    },
+    sun: { dir: [-0.628, 0.327, 0.706], color: '#ffd0a0', intensity: 3.4, disc: '#ffe6c0', discSize: 14 },
     fog: { color: '#f0c7a4', near: 520, far: 2000 },
     hemi: { sky: '#ffe0c2', ground: '#3e4a32', intensity: 0.58 },
     env: {
@@ -277,6 +310,12 @@ export const THEMES = {
       fillIntensity: 1.5,
     },
     exposure: 1.06,
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+      ground: { set: 'Grass005', source: 'ambientcg', tile: 4, macro: 0.8, mean: 0.13, envMapIntensity: 0.5 },
+    },
     ground: { kind: 'grass', color: '#d5eea8' },
     scenery: {
       scrub: {
@@ -291,7 +330,6 @@ export const THEMES = {
         near: { count: 14, min: 650, span: 180, sink: 12, h0: 0.12, h1: 0.08, palette: ['#6d8a58', '#5e7a62', '#7e9460', '#88a070'] },
         far: { count: 16, min: 1000, span: 360, sink: 22, h0: 0.16, h1: 0.1, palette: ['#e4c2a4', '#d8b898', '#efd0b4', '#c9aa90'] },
       },
-      clouds: { count: 16, opacity: 0.34, emissive: '#ffe6d0', emissiveIntensity: 0.28 },
       stands: { mode: 'track', count: 6 },
       flags: {
         every: 4,
@@ -336,6 +374,11 @@ export const THEMES = {
       fillIntensity: 0.35,
     },
     exposure: 1.12,
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+    },
     ground: { kind: 'night', color: '#2a3142' },
     scenery: {
       skyline: {

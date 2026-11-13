@@ -7,6 +7,8 @@ All downloaded assets are CC0 unless noted.
   `pow(radiance / 8, 1/2.2)` by `tools/assets/encode-sky.mjs`.
 - `tex/asphalt_track_*`, `tex/concrete_wall_008_*`: Poly Haven, CC0.
 - `tex/Grass005_*`: ambientCG (Lennart Demes), CC0.
+- `sky/qwantani_late_*`: "Qwantani Late Afternoon (Pure Sky)", Poly Haven, CC0. Encoded the same way.
+- `tex/aerial_beach_01_*`, `tex/snow_02_*`: Poly Haven, CC0.
 
 ## Car
 
