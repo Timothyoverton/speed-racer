@@ -437,6 +437,7 @@ export function trackMaterials() {
     }
     if (sf.wall) cache.concrete = scannedMaterial(sf.wall.set, sf.wall)
     if (sf.ground) cache.grass = scannedMaterial(sf.ground.set, sf.ground)
+    if (sf.rock) cache.rock = scannedMaterial(sf.rock.set, sf.rock)
   }
   return cache
 }

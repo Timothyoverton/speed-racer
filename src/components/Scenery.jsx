@@ -199,6 +199,28 @@ function sandUnderwater(mat, spec) {
   return mat
 }
 
+// A weathered mound in the same unit box as the cone it replaces (apex +0.5,
+// base -0.5, radius 0.5): rounded shoulders, a blunt top and lumpy flanks, so
+// hills, spires and dunes stop reading as party hats.
+function rockCone() {
+  const g = new THREE.ConeGeometry(0.5, 1, 28, 14)
+  const p = g.attributes.position
+  const n3 = (x, y, z) => Math.sin(x * 7.3 + y * 3.1) * Math.cos(z * 6.1 - y * 4.7) * 0.5 + Math.sin(x * 15.7 - z * 13.3 + y * 9.1) * 0.25
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i)
+    const t = y + 0.5 // 0 at the base, 1 at the apex
+    const r = Math.hypot(x, z)
+    if (r < 1e-5) {
+      p.setY(i, 0.5 - 0.06)
+      continue
+    }
+    const want = 0.5 * Math.pow(1 - t, 0.62) * (1 + 0.22 * n3(x / r, t * 2.0, z / r))
+    p.setXYZ(i, (x / r) * want, y - 0.06 * t + 0.05 * n3(z / r, t * 3.0, x / r) * t, (z / r) * want)
+  }
+  g.computeVertexNormals()
+  return g
+}
+
 export default function Scenery() {
   const mats = useMemo(() => trackMaterials(), [])
   const [cx, , cz] = BOUNDS.center
@@ -457,6 +479,23 @@ export default function Scenery() {
         const tint = mate && family && rand() < 0.8 ? family : pick(rand, s.palette)
         if (!mate) family = tint
         const squash = mate ? 0.85 + rand() * 0.3 : 1
+        if (s.model) {
+          // a modelled bush (Trees.jsx), listed after the forest's species
+          if (rand() > (s.model.keep ?? 1)) return
+          let near = Infinity
+          for (const t of TRACK.tiles) near = Math.min(near, Math.hypot(t.pos[0] - x, t.pos[2] - z))
+          out.treeSpots.push({
+            x, z,
+            y: GROUND_Y + terrainHeight(x, z) - 0.1,
+            h: (s.model.height || 1.5) * (0.7 + w * 0.3),
+            girth: 0.9 + rand() * 0.5,
+            yaw: rand() * Math.PI * 2,
+            species: (spec.forest?.model?.species.length || 0) + Math.floor(rand() * s.model.species.length),
+            lite: false,
+            tint,
+          })
+          return
+        }
         put(out.scrub, out.scrubColors, { p: [x, gy + h * 0.35, z], r: [0, rand() * 3, 0], s: [w, h, w * squash] }, tint)
       }
       if (s.colony) scatterColonies(s.count, s.minOff, s.maxOff, s.clear, s.colony, place)
@@ -1230,10 +1269,12 @@ export default function Scenery() {
     return out
   }, [cx, cz, R, gy, spec])
 
+  const flora = useMemo(() => [...(spec.forest?.model?.species || []), ...(spec.scrub?.model?.species || [])], [spec])
+
   const geos = useMemo(
     () => ({
       cone: new THREE.ConeGeometry(0.5, 1, 7),
-      hill: new THREE.ConeGeometry(0.5, 1, 9),
+      hill: THEME.surfaces ? rockCone() : new THREE.ConeGeometry(0.5, 1, 9),
       puff: new THREE.SphereGeometry(0.5, 10, 7),
       ball: new THREE.SphereGeometry(0.5, 8, 6),
       cyl: new THREE.CylinderGeometry(0.5, 0.55, 1, 6),
@@ -1353,7 +1394,7 @@ export default function Scenery() {
           <primitive object={ground} attach="material" />
         </mesh>
       )}
-      {extra.treeSpots.length > 0 && <Trees spots={extra.treeSpots} species={spec.forest.model.species} />}
+      {extra.treeSpots.length > 0 && <Trees spots={extra.treeSpots} species={flora} />}
 
       {sea && (
         <group position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -1372,7 +1413,7 @@ export default function Scenery() {
       <Shapes items={extra.hills} geometry={geos.hill} material={mat.white} colors={extra.hillColors} />
       <Shapes items={extra.spires} geometry={geos.hill} material={rock} colors={extra.spireColors} />
       <Shapes items={extra.snow} geometry={geos.cone} material={mat.snow} colors={extra.snowColors} />
-      <Shapes items={extra.dunes} geometry={geos.hill} material={mat.white} colors={extra.duneColors} />
+      <Shapes items={extra.dunes} geometry={geos.hill} material={THEME.surfaces?.ground ? ground : mat.white} colors={THEME.surfaces?.ground ? undefined : extra.duneColors} receiveShadow />
       <Boxes items={extra.rocks} material={rock} colors={extra.rockColors} castShadow receiveShadow />
 
       <Shapes items={extra.trunks} geometry={trunkGeo} material={mat.white} colors={extra.trunkColors} />

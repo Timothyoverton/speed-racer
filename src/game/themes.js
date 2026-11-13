@@ -121,6 +121,7 @@ export const THEMES = {
         bark: ['#8a6a42', '#a07c4e', '#6e5434', '#b89060', '#5c482c'],
       },
       scrub: {
+        model: { species: [{ preset: 'Bush 1', seed: 31 }, { preset: 'Bush 2', seed: 67 }, { preset: 'Bush 3', seed: 5 }], height: 1.4, keep: 0.5 },
         count: 220,
         clear: 10,
         minOff: 10,
@@ -160,7 +161,10 @@ export const THEMES = {
     },
     exposure: 1.06,
     grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    // half of Test Pad's relief
+    terrain: { flat: 75, rise: 320, lift: 2.5, roll: 17, hills: 60, scale: 210 },
     surfaces: {
+      rock: { set: 'rock_boulder_cracked', tile: 14, macro: 0.5, mean: 0.343, gain: 2.6 },
       road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
       wall: { set: 'concrete_wall_008', tile: 3 },
       ground: { set: 'aerial_beach_01', tile: 6, macro: 0.7, mean: 0.248, tint: '#f2c690', envMapIntensity: 0.5 },
@@ -168,6 +172,7 @@ export const THEMES = {
     ground: { kind: 'sand', color: '#d2b074' },
     scenery: {
       scrub: {
+        model: { species: [{ preset: 'Bush 1', seed: 31 }, { preset: 'Bush 2', seed: 67 }, { preset: 'Bush 3', seed: 5 }], height: 1.3, keep: 0.5 },
         count: 200,
         clear: 9,
         minOff: 9,
@@ -194,17 +199,6 @@ export const THEMES = {
         maxOff: 140,
         palette: ['#e6c98a', '#f0d7a4', '#d4b56e', '#c9a25c', '#f4e2b8', '#deb86e'],
       },
-      hills: {
-        far: {
-          count: 20,
-          min: 900,
-          span: 500,
-          sink: 30,
-          h0: 0.22,
-          h1: 0.16,
-          palette: ['#c4a07a', '#b89070', '#d4b48c', '#a88868'],
-        },
-      },
     },
   },
 
@@ -229,7 +223,10 @@ export const THEMES = {
     },
     exposure: 1.05,
     grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    // half of Test Pad's relief
+    terrain: { flat: 75, rise: 320, lift: 2.5, roll: 17, hills: 60, scale: 210 },
     surfaces: {
+      rock: { set: 'rock_face_03', tile: 16, macro: 0.5, mean: 0.158, gain: 5.5 },
       road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
       wall: { set: 'concrete_wall_008', tile: 3 },
       ground: { set: 'snow_02', tile: 6, macro: 0.5, mean: 0.386, envMapIntensity: 0.6 },
@@ -237,7 +234,7 @@ export const THEMES = {
     ground: { kind: 'snow', color: '#e3ebf3' },
     scenery: {
       forest: {
-        count: 850,
+        count: 425,
         clear: 18,
         band: [16, 110],
         snow: 1,
@@ -256,6 +253,7 @@ export const THEMES = {
         },
       },
       scrub: {
+        model: { species: [{ preset: 'Bush 1', seed: 31 }, { preset: 'Bush 2', seed: 67 }, { preset: 'Bush 3', seed: 5 }], height: 1.2, keep: 0.5 },
         count: 180,
         clear: 12,
         minOff: 12,
@@ -311,6 +309,8 @@ export const THEMES = {
     },
     exposure: 1.06,
     grade: { ao: { radius: 2.2, intensity: 2.4 } },
+    // half of Test Pad's relief
+    terrain: { flat: 75, rise: 320, lift: 2.5, roll: 17, hills: 60, scale: 210 },
     surfaces: {
       road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
       wall: { set: 'concrete_wall_008', tile: 3 },
@@ -318,17 +318,28 @@ export const THEMES = {
     },
     ground: { kind: 'grass', color: '#d5eea8' },
     scenery: {
+      // half Test Pad's forest
+      forest: {
+        count: 310, clear: 30, reach: 300, snow: 0, palette: LEAF, bark: BARK,
+        model: {
+          species: [
+            { preset: 'Oak Medium', seed: 77 },
+            { preset: 'Ash Medium', seed: 1203 },
+            { preset: 'Oak Large', seed: 19 },
+          ],
+          height: [10, 20],
+          fullWithin: 140,
+          tints: ['#ffffff', '#f0ecd0', '#e4e8c8', '#f6f0dc'],
+        },
+      },
       scrub: {
+        model: { species: [{ preset: 'Bush 1', seed: 31 }, { preset: 'Bush 2', seed: 67 }, { preset: 'Bush 3', seed: 5 }], height: 1.5, keep: 0.5 },
         count: 140,
         clear: 10,
         minOff: 10,
         maxOff: 50,
         round: true,
         palette: ['#3aaa4a', '#f0c400', '#2f8fd4', '#e05070', '#7dcb4a', '#ff8a3a'],
-      },
-      hills: {
-        near: { count: 14, min: 650, span: 180, sink: 12, h0: 0.12, h1: 0.08, palette: ['#6d8a58', '#5e7a62', '#7e9460', '#88a070'] },
-        far: { count: 16, min: 1000, span: 360, sink: 22, h0: 0.16, h1: 0.1, palette: ['#e4c2a4', '#d8b898', '#efd0b4', '#c9aa90'] },
       },
       stands: { mode: 'track', count: 6 },
       flags: {
