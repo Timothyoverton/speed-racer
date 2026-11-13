@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { EffectComposer, Bloom, ToneMapping } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, ToneMapping, N8AO } from '@react-three/postprocessing'
 import { Effect, ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import { UnsignedByteType } from 'three'
@@ -71,11 +71,11 @@ class GradeEffect extends Effect {
 const DEFAULT_GRADE = {
   shadow: '#d9f2f4',
   high: '#fff1dc',
-  split: 0.55,
-  contrast: 0.22,
-  sat: 1.08,
-  vignette: 0.28,
-  bloom: { intensity: 0.45, threshold: 0.88, smoothing: 0.25, radius: 0.7 },
+  split: 0.18,
+  contrast: 0.05,
+  sat: 1.0,
+  vignette: 0.16,
+  bloom: { intensity: 0.4, threshold: 1.0, smoothing: 0.2, radius: 0.7 },
 }
 
 function gradeFor(theme) {
@@ -100,6 +100,7 @@ export default function PostFx() {
 
   return (
     <EffectComposer multisampling={4} enableNormalPass={false} frameBufferType={grade.tone === false ? UnsignedByteType : undefined}>
+      {grade.ao ? <N8AO aoRadius={grade.ao.radius} intensity={grade.ao.intensity} distanceFalloff={1} quality="medium" halfRes /> : <></>}
       <Bloom
         ref={bloomRef}
         mipmapBlur

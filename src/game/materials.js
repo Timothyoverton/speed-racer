@@ -11,6 +11,8 @@ import {
   kerbMap,
   checkerMap, hazardMap, brickMap, waterfallMap, rockMap } from './textures.js'
 import { TRACK } from './track.js'
+import { THEME } from './themes.js'
+import { scannedMaterial } from './pbr.js'
 
 // Fish Pond's water: one clock every shader there reads (set once a frame by
 // Underwater.jsx), and the caustic net the sand and the surface glow share.
@@ -426,6 +428,16 @@ export function trackMaterials() {
       metalness: 0,
     }),
   }
+  // Themes with scanned surfaces swap them in over the drawn ones.
+  const sf = THEME.surfaces
+  if (sf) {
+    if (sf.road) {
+      cache.asphalt = scannedMaterial(sf.road.set, sf.road)
+      cache.rampTop = cache.asphalt
+    }
+    if (sf.wall) cache.concrete = scannedMaterial(sf.wall.set, sf.wall)
+    if (sf.ground) cache.grass = scannedMaterial(sf.ground.set, sf.ground)
+  }
   return cache
 }
 
@@ -436,9 +448,9 @@ export function gateMaterial(color) {
   return new THREE.MeshStandardMaterial({
     color,
     emissive: color,
-    emissiveIntensity: 0.07,
+    emissiveIntensity: 0.03,
     transparent: true,
-    opacity: 0.16,
+    opacity: 0.07,
     side: THREE.DoubleSide,
     depthWrite: false,
   })

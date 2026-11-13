@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
 import { Environment, Lightformer, PerformanceMonitor, AdaptiveDpr } from '@react-three/drei'
@@ -17,6 +17,10 @@ import { THEME } from '../game/themes.js'
 import PerfProbe from './PerfProbe.jsx'
 import PostFx from './PostFx.jsx'
 import { displayColor } from '../game/fxColor.js'
+import PhotoSky, { photoHorizon } from './PhotoSky.jsx'
+
+const PHOTO = THEME.sky.photo
+const HAZE = PHOTO ? photoHorizon(PHOTO) : null
 
 const [cx, , cz] = BOUNDS.center
 
@@ -30,13 +34,20 @@ const sunPos = [cx + SUN[0] * SUN_DIST, SUN[1] * SUN_DIST, cz + SUN[2] * SUN_DIS
 // which also makes the shadows much sharper than stretching one box over the
 // whole circuit. Long Ribbon is ~1km end to end; a fixed box centred on the
 // track would simply run out before the ends.
-const shadowSpan = 110
+// Photo-lit themes get a tighter, much denser map: about 4cm a texel near the car.
+const shadowSpan = PHOTO ? 85 : 110
+const shadowSize = PHOTO ? 4096 : 1024
 
 function SunFollow({ lightRef }) {
   useFrame(() => {
     const l = lightRef.current
     if (!l) return
-    const [px, py, pz] = carState.pos
+    let [px, py, pz] = carState.pos
+    // move in whole steps so shadow edges don't crawl as the car drives
+    const q = 4
+    px = Math.round(px / q) * q
+    py = Math.round(py / q) * q
+    pz = Math.round(pz / q) * q
     l.position.set(px + SUN[0] * SUN_DIST, py + SUN[1] * SUN_DIST, pz + SUN[2] * SUN_DIST)
     l.target.position.set(px, py, pz)
     l.target.updateMatrixWorld()
@@ -76,15 +87,20 @@ export default function Scene() {
       />
       <PerfProbe />
       <AdaptiveDpr pixelated />
-      <color attach="background" args={[displayColor(THEME.sky.horizon, THEME, true)]} />
+      <color attach="background" args={[HAZE || displayColor(THEME.sky.horizon, THEME, true)]} />
       {/* Haze tinted to this track's horizon, so distance reads as depth.
           The colour is the sky horizon (themes.js keeps them as one string):
           a distant hill fades into the sky behind it instead of into a
           slightly different blue. */}
-      <fog attach="fog" args={[displayColor(THEME.fog.color, THEME, true), THEME.fog.near, THEME.fog.far]} />
+      <fog attach="fog" args={[HAZE || displayColor(THEME.fog.color, THEME, true), THEME.fog.near, THEME.fog.far]} />
 
-      <SkyDome fx />
-
+      {PHOTO ? (
+        <Suspense fallback={null}>
+          <PhotoSky />
+        </Suspense>
+      ) : (
+        <>
+          <SkyDome fx />
       <Environment resolution={128} frames={1} background={false}>
         <mesh scale={120}>
           <sphereGeometry args={[1, 24, 24]} />
@@ -133,6 +149,8 @@ export default function Scene() {
       </Environment>
 
       <hemisphereLight args={[THEME.hemi.sky, THEME.hemi.ground, THEME.hemi.intensity]} />
+        </>
+      )}
       <directionalLight
         ref={sun}
         castShadow
@@ -140,15 +158,15 @@ export default function Scene() {
         target-position={[cx, 0, cz]}
         intensity={THEME.sun.intensity}
         color={THEME.sun.color}
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[shadowSize, shadowSize]}
         shadow-camera-left={-shadowSpan}
         shadow-camera-right={shadowSpan}
         shadow-camera-top={shadowSpan}
         shadow-camera-bottom={-shadowSpan}
         shadow-camera-near={1}
         shadow-camera-far={SUN_DIST * 2}
-        shadow-bias={-0.0006}
-        shadow-normalBias={0.03}
+        shadow-bias={PHOTO ? -0.0002 : -0.0006}
+        shadow-normalBias={PHOTO ? 0.06 : 0.03}
       />
 
       <SunFollow lightRef={sun} />

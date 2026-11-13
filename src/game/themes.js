@@ -20,8 +20,23 @@ export const THEMES = {
   // Proving ground. Same light as before, so the default circuit doesn't shift,
   // with the forest pulled back enough to read as an open pad.
   'test-pad-0': {
-    sky: { zenith: '#2f6fbe', horizon: '#cddff0', sun: '#ffdca6', warm: 1, glow: 1, stars: 0 },
-    sun: { dir: TEST_SUN, color: '#fff2dc', intensity: 2.6, disc: '#fff8e6', discSize: 13 },
+    sky: {
+      zenith: '#2f6fbe', horizon: '#cddff0', sun: '#ffdca6', warm: 1, glow: 1, stars: 0,
+      // A photographed sky (PhotoSky.jsx). sunDir and horizon are measured from
+      // the panorama by tools/assets/encode-sky.mjs; yaw turns it so the sun
+      // sits where this circuit's light has always come from.
+      photo: {
+        env: 'sky/kloofendal_1k.hdr',
+        map: 'sky/kloofendal_sky_4k.jpg',
+        sunDir: [0.554, 0.742, 0.377],
+        horizon: [0.442, 0.475, 0.576],
+        yaw: -1.594,
+        gain: 1,
+        envIntensity: 1,
+      },
+    },
+    // dir is photo.sunDir turned by photo.yaw, so shadows fall away from the sun you see
+    sun: { dir: [-0.39, 0.742, 0.545], color: '#fff4e2', intensity: 3.2, disc: '#fff8e6', discSize: 13 },
     fog: { color: '#cddff0', near: 620, far: 2200 },
     hemi: { sky: '#cfe0ff', ground: '#37402f', intensity: 0.55 },
     env: {
@@ -36,7 +51,15 @@ export const THEMES = {
       fillIntensity: 1.4,
     },
     exposure: 1.04,
+    // contact shading where things meet the ground (PostFx.jsx)
+    grade: { ao: { radius: 2.2, intensity: 2.4 } },
     ground: { kind: 'grass', color: '#ffffff' },
+    // scanned surfaces (pbr.js): tile is metres per repeat
+    surfaces: {
+      road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
+      wall: { set: 'concrete_wall_008', tile: 3 },
+      ground: { set: 'Grass005', source: 'ambientcg', tile: 4, macro: 0.8, mean: 0.13, envMapIntensity: 0.5 },
+    },
     scenery: {
       forest: { count: 900, clear: 26, reach: 280, snow: 0, palette: LEAF, bark: BARK },
       scrub: { count: 160, clear: 14, minOff: 14, maxOff: 120, palette: SCRUB },
@@ -44,7 +67,7 @@ export const THEMES = {
         near: { count: 30, min: 600, span: 240, sink: 10, h0: 0.2, h1: 0.16, palette: HILL_NEAR },
         far: { count: 22, min: 1000, span: 420, sink: 24, h0: 0.24, h1: 0.2, palette: HILL_FAR },
       },
-      clouds: { count: 20, opacity: 0.32, emissive: '#c9dcf2', emissiveIntensity: 0.25 },
+      // no modelled clouds: the photographed sky has its own
       stands: { mode: 'bounds' },
       masts: { count: 8 },
       sheds: { count: 5, palette: ['#d5dbe3', '#c3cad4', '#e4e0d4', '#b7c3b8', '#cfd6df'] },

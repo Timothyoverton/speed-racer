@@ -34,7 +34,8 @@ const SMOKE_FS = /* glsl */ `
   void main() {
     vec4 t = texture2D(uMap, gl_PointCoord);
     if (t.a * vAlpha < 0.004) discard;
-    gl_FragColor = vec4(uColor, t.a * vAlpha);
+    // blended in linear light by the composer: half the alpha reads as before
+    gl_FragColor = vec4(uColor, t.a * vAlpha * 0.5);
   }
 `
 
