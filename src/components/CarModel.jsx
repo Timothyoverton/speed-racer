@@ -999,7 +999,8 @@ function CarModelInner({ ghost = false, color = '#2f6dff', live = false, model }
             <mesh geometry={geo.tips} material={mat.exhaust} />
           </>
         )}
-        {PIPE_X.map((x, i) => (
+        {/* the modelled cars have a left and a right exhaust; the drawn car has four pipes */}
+        {(glb ? [-0.35, 0.35] : PIPE_X).map((x, i) => (
           <group key={x}>
             {live && (
               <>
