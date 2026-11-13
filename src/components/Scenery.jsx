@@ -6,6 +6,8 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import Boxes, { Shapes } from './Boxes.jsx'
 import { BOUNDS, GROUND_Y } from '../game/trackVisuals.js'
+import { HAS_TERRAIN, terrainHeight } from '../game/terrain.js'
+import Trees from './Trees.jsx'
 import { sampleTrack } from '../game/trackQuery.js'
 import { TRACK } from '../game/track.js'
 import { trackMaterials, UW, CAUSTIC_GLSL, causticMap, litUnderwater } from '../game/materials.js'
@@ -220,6 +222,7 @@ export default function Scenery() {
     const rand = rng(1337)
     const blocked = buildKeepOut()
     const out = {
+      treeSpots: [],
       trunks: [], trunkColors: [], posts: [], postColors: [], crowns: [], crownColors: [],
       scrub: [], scrubColors: [], hills: [], hillColors: [],
       rocks: [], rockColors: [], spires: [], spireColors: [],
@@ -360,6 +363,22 @@ export default function Scenery() {
     if (spec.forest) {
       const f = spec.forest
       const placeTree = (x, z, _yaw, tile) => {
+        if (f.model) {
+          // a modelled tree (Trees.jsx): record where it stands and how big
+          let near = Infinity
+          for (const t of TRACK.tiles) near = Math.min(near, Math.hypot(t.pos[0] - x, t.pos[2] - z))
+          out.treeSpots.push({
+            x, z,
+            y: GROUND_Y + terrainHeight(x, z) - 0.15,
+            h: f.model.height[0] + rand() * (f.model.height[1] - f.model.height[0]),
+            girth: 0.85 + rand() * 0.4,
+            yaw: rand() * Math.PI * 2,
+            species: Math.floor(rand() * f.model.species.length),
+            lite: near > f.model.fullWithin,
+            tint: pick(rand, f.model.tints),
+          })
+          return
+        }
         const h = f.palm ? 6.5 + rand() * 4 : 4.5 + rand() * 9.5
         const w = f.palm ? 2.4 + rand() * 1.4 : 2.0 + rand() * 2.4
         const bark = pick(rand, f.bark)
@@ -1307,15 +1326,33 @@ export default function Scenery() {
   }, [spec])
 
   const span = Math.max(2600, (R + THEME.fog.far + 200) * 2)
+  // rolling themes get a real mesh; the rest keep the single flat quad
+  const land = useMemo(() => {
+    if (!HAS_TERRAIN) return null
+    const N = 220
+    const g = new THREE.PlaneGeometry(span, span, N, N)
+    g.rotateX(-Math.PI / 2)
+    const p = g.attributes.position
+    for (let i = 0; i < p.count; i++) p.setY(i, terrainHeight(p.getX(i) + cx, p.getZ(i) + cz))
+    g.computeVertexNormals()
+    return g
+  }, [span, cx, cz])
   const trunkGeo = extra.palm ? geos.cyl : geos.cone
   const scrubGeo = extra.roundScrub ? geos.ball : geos.cone
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, GROUND_Y, cz]} receiveShadow>
-        <planeGeometry args={[span, span]} />
-        <primitive object={ground} attach="material" />
-      </mesh>
+      {land ? (
+        <mesh position={[cx, GROUND_Y, cz]} geometry={land} receiveShadow>
+          <primitive object={ground} attach="material" />
+        </mesh>
+      ) : (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, GROUND_Y, cz]} receiveShadow>
+          <planeGeometry args={[span, span]} />
+          <primitive object={ground} attach="material" />
+        </mesh>
+      )}
+      {extra.treeSpots.length > 0 && <Trees spots={extra.treeSpots} species={spec.forest.model.species} />}
 
       {sea && (
         <group position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]}>

@@ -7,14 +7,8 @@
 import { TRACK } from './track.js'
 
 const LEAF = ['#2c5a33', '#356b3a', '#24512e', '#3d7442', '#2a6340', '#1f4a2b', '#437a46']
-const HILL_NEAR = ['#3f5a55', '#47635c', '#38534f', '#4e6b62', '#334d4a']
-const HILL_FAR = ['#5f7887', '#687f92', '#57707f', '#71879a']
-const SCRUB = ['#3c5f34', '#456b3b', '#33512c', '#4d7340']
 const BARK = ['#4a3a2c', '#5c4632', '#3b2e22', '#6a5140', '#2e261c']
 
-// Test Pad keeps the original afternoon: these are the hard-coded values Scene
-// and SkyDome used when every circuit shared one look.
-const TEST_SUN = [-0.55, 0.32, 0.77]
 
 export const THEMES = {
   // Proving ground. Same light as before, so the default circuit doesn't shift,
@@ -37,7 +31,7 @@ export const THEMES = {
     },
     // dir is photo.sunDir turned by photo.yaw, so shadows fall away from the sun you see
     sun: { dir: [-0.39, 0.742, 0.545], color: '#fff4e2', intensity: 3.2, disc: '#fff8e6', discSize: 13 },
-    fog: { color: '#cddff0', near: 620, far: 2200 },
+    fog: { color: '#cddff0', near: 180, far: 2400 },
     hemi: { sky: '#cfe0ff', ground: '#37402f', intensity: 0.55 },
     env: {
       sky: '#9dbde2',
@@ -54,6 +48,8 @@ export const THEMES = {
     // contact shading where things meet the ground (PostFx.jsx)
     grade: { ao: { radius: 2.2, intensity: 2.4 } },
     ground: { kind: 'grass', color: '#ffffff' },
+    // level for `flat` metres past the circuit, then rising (terrain.js)
+    terrain: { flat: 75, rise: 320, lift: 5, roll: 34, hills: 120, scale: 210 },
     // scanned surfaces (pbr.js): tile is metres per repeat
     surfaces: {
       road: { set: 'asphalt_track', tile: 5, macro: 0.45, mean: 0.015, gain: 4, normalScale: 1.2 },
@@ -61,11 +57,22 @@ export const THEMES = {
       ground: { set: 'Grass005', source: 'ambientcg', tile: 4, macro: 0.8, mean: 0.13, envMapIntensity: 0.5 },
     },
     scenery: {
-      forest: { count: 900, clear: 26, reach: 280, snow: 0, palette: LEAF, bark: BARK },
-      scrub: { count: 160, clear: 14, minOff: 14, maxOff: 120, palette: SCRUB },
-      hills: {
-        near: { count: 30, min: 600, span: 240, sink: 10, h0: 0.2, h1: 0.16, palette: HILL_NEAR },
-        far: { count: 22, min: 1000, span: 420, sink: 24, h0: 0.24, h1: 0.2, palette: HILL_FAR },
+      forest: {
+        count: 620, clear: 26, reach: 300, snow: 0, palette: LEAF, bark: BARK,
+        // grown by ez-tree and instanced (Trees.jsx). Trees within fullWithin
+        // metres of the road get the detailed model.
+        model: {
+          species: [
+            { preset: 'Pine Medium', seed: 4107 },
+            { preset: 'Pine Large', seed: 911 },
+            { preset: 'Pine Medium', seed: 2718 },
+            { preset: 'Oak Medium', seed: 77 },
+            { preset: 'Ash Medium', seed: 1203 },
+          ],
+          height: [11, 24],
+          fullWithin: 70,
+          tints: ['#ffffff', '#e6f0e0', '#d5e6d0', '#f4f4e4', '#c9dcc4'],
+        },
       },
       // no modelled clouds: the photographed sky has its own
       stands: { mode: 'bounds' },

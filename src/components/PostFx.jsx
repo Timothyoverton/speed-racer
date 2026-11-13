@@ -83,6 +83,9 @@ function gradeFor(theme) {
   return { ...DEFAULT_GRADE, ...g, bloom: { ...DEFAULT_GRADE.bloom, ...(g.bloom || {}) } }
 }
 
+// dev only: ?noao drops the occlusion pass, to measure what it costs
+const NO_AO = import.meta.env.DEV && /[?&]noao\b/.test(window.location.search)
+
 export default function PostFx() {
   const grade = useMemo(() => gradeFor(THEME), [])
   const effect = useMemo(() => new GradeEffect(grade), [grade])
@@ -100,7 +103,7 @@ export default function PostFx() {
 
   return (
     <EffectComposer multisampling={4} enableNormalPass={false} frameBufferType={grade.tone === false ? UnsignedByteType : undefined}>
-      {grade.ao ? <N8AO aoRadius={grade.ao.radius} intensity={grade.ao.intensity} distanceFalloff={1} quality="medium" halfRes /> : <></>}
+      {grade.ao && !NO_AO ? <N8AO aoRadius={grade.ao.radius} intensity={grade.ao.intensity} distanceFalloff={1} quality="medium" halfRes /> : <></>}
       <Bloom
         ref={bloomRef}
         mipmapBlur
