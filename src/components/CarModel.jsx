@@ -11,7 +11,6 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { carState } from '../game/carState.js'
-import { THEME } from '../game/themes.js'
 import { useCarGlb } from './carGlb.js'
 import { getCarModelId } from '../game/carModelChoice.js'
 
@@ -798,9 +797,9 @@ function Wheel({ geo, mat, position, steerRef, spinRef, flip = false }) {
 
 const PIPE_X = [-0.46, -0.17, 0.17, 0.46]
 
-// Fish Pond keeps the drawn car to match its drawn world; everywhere else
-// gets the modelled one.
-const USE_GLB = !THEME.water
+// Every track drives the modelled cars. The drawn car below is kept as the
+// fallback path only.
+const USE_GLB = true
 const noGlb = () => null
 const useGlb = USE_GLB ? useCarGlb : noGlb
 const useGeo = USE_GLB ? noGlb : useCarGeometry
