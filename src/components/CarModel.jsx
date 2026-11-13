@@ -6,11 +6,13 @@
 // are merged by material so the whole car stays a handful of draw calls.
 // Boost flames hang off the four pipes and only exist on the live car. They
 // read `carState.nos` (the driver boost); nothing here writes gameplay state.
-import { useMemo, useRef } from 'react'
+import { Suspense, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { carState } from '../game/carState.js'
+import { THEME } from '../game/themes.js'
+import { useCarGlb } from './carGlb.js'
 
 const WHEEL_R = 0.42
 const TRACK_HALF = 0.95 // tub stays inboard of this, so the wheels stand clear
@@ -795,8 +797,24 @@ function Wheel({ geo, mat, position, steerRef, spinRef, flip = false }) {
 
 const PIPE_X = [-0.46, -0.17, 0.17, 0.46]
 
-export default function CarModel({ ghost = false, color = '#2f6dff', live = false }) {
-  const geo = useCarGeometry(color)
+// Fish Pond keeps the drawn car to match its drawn world; everywhere else
+// gets the modelled one.
+const USE_GLB = !THEME.water
+const noGlb = () => null
+const useGlb = USE_GLB ? useCarGlb : noGlb
+const useGeo = USE_GLB ? noGlb : useCarGeometry
+
+export default function CarModel(props) {
+  return (
+    <Suspense fallback={null}>
+      <CarModelInner {...props} />
+    </Suspense>
+  )
+}
+
+function CarModelInner({ ghost = false, color = '#2f6dff', live = false }) {
+  const geo = useGeo(color)
+  const glb = useGlb(ghost, color, WHEEL_R, WHEEL_Y)
   const mat = useMaterials(ghost, color)
 
   const chassis = useRef(null)
@@ -909,6 +927,12 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
     if (fr.current) fr.current.rotation.y = steerAngle
 
     for (const r of spin) if (r.current) r.current.rotation.x = -s.wheelSpin
+    if (glb) {
+      for (const g of glb.steer) g.rotation.y = steerAngle
+      for (const g of glb.spin) g.rotation.x = s.wheelSpin * glb.spinSign
+      const lit = 0.7 + (s.brake > 0.05 || s.handbrake ? 5 : 0)
+      for (const m of glb.brake) m.emissiveIntensity = lit
+    }
 
     mat.disc.emissiveIntensity = THREE.MathUtils.lerp(
       mat.disc.emissiveIntensity,
@@ -950,30 +974,40 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
     mat.blur.opacity = THREE.MathUtils.clamp((s.speed - 12) / 26, 0, 0.55)
   })
 
+  const tailZ = glb ? glb.tailZ + 0.05 : -2.22
+  const PIPE_K = glb ? 1.3 : 1
+  const PIPE_Y = glb ? -0.3 : -0.26
+
   return (
     <group ref={attitude}>
       <group ref={chassis}>
-        <mesh name="car-body" geometry={geo.body} material={mat.paint} castShadow receiveShadow />
-        <mesh geometry={geo.carbon} material={mat.carbon} castShadow />
-        <mesh geometry={geo.livery} material={mat.livery} />
-        <mesh geometry={geo.pit} material={mat.pit} />
-        <mesh geometry={geo.canopy} material={mat.glass} />
-        <mesh geometry={geo.helmet} material={mat.helmet} position={[0, 0.09, 0.2]} castShadow />
-        <mesh geometry={geo.visor} material={mat.visor} position={[0, 0.1, 0.3]} scale={[1.25, 0.62, 0.42]} />
-        <mesh geometry={geo.head} material={mat.head} />
-        <mesh geometry={geo.tail} material={mat.tail} />
-        <mesh geometry={geo.pipes} material={mat.rim} />
-        <mesh geometry={geo.tips} material={mat.exhaust} />
+        {glb ? (
+          <primitive object={glb.body} />
+        ) : (
+          <>
+            <mesh name="car-body" geometry={geo.body} material={mat.paint} castShadow receiveShadow />
+            <mesh geometry={geo.carbon} material={mat.carbon} castShadow />
+            <mesh geometry={geo.livery} material={mat.livery} />
+            <mesh geometry={geo.pit} material={mat.pit} />
+            <mesh geometry={geo.canopy} material={mat.glass} />
+            <mesh geometry={geo.helmet} material={mat.helmet} position={[0, 0.09, 0.2]} castShadow />
+            <mesh geometry={geo.visor} material={mat.visor} position={[0, 0.1, 0.3]} scale={[1.25, 0.62, 0.42]} />
+            <mesh geometry={geo.head} material={mat.head} />
+            <mesh geometry={geo.tail} material={mat.tail} />
+            <mesh geometry={geo.pipes} material={mat.rim} />
+            <mesh geometry={geo.tips} material={mat.exhaust} />
+          </>
+        )}
         {PIPE_X.map((x, i) => (
           <group key={x}>
             {live && (
               <>
-                <group ref={flames[i]} position={[x, -0.26, -2.22]} visible={false}>
+                <group ref={flames[i]} position={[x * PIPE_K, PIPE_Y, tailZ]} visible={false}>
                   <mesh geometry={flameGeo}>
                     <primitive object={flameMats[i]} attach="material" />
                   </mesh>
                 </group>
-                <mesh position={[x, -0.26, -2.24]}>
+                <mesh position={[x * PIPE_K, PIPE_Y, tailZ - 0.02]}>
                   <sphereGeometry args={[0.2, 12, 8]} />
                   <primitive object={glowMat} attach="material" />
                 </mesh>
@@ -981,28 +1015,34 @@ export default function CarModel({ ghost = false, color = '#2f6dff', live = fals
             )}
           </group>
         ))}
-        {live && <pointLight ref={flameLight} position={[0, -0.1, -2.7]} color="#4d8dff" intensity={0} distance={7} decay={2} />}
+        {live && <pointLight ref={flameLight} position={[0, -0.1, tailZ - 0.5]} color="#4d8dff" intensity={0} distance={7} decay={2} />}
       </group>
 
-      <mesh geometry={geo.arms} material={mat.carbon} />
-
-      <Wheel geo={geo} mat={mat} position={[TRACK_HALF, WHEEL_Y, WHEELBASE_F]} steerRef={fl} spinRef={spin[0]} />
-      <Wheel
-        geo={geo}
-        mat={mat}
-        position={[-TRACK_HALF, WHEEL_Y, WHEELBASE_F]}
-        steerRef={fr}
-        spinRef={spin[1]}
-        flip
-      />
-      <Wheel geo={geo} mat={mat} position={[TRACK_HALF, WHEEL_Y, WHEELBASE_R]} spinRef={spin[2]} />
-      <Wheel
-        geo={geo}
-        mat={mat}
-        position={[-TRACK_HALF, WHEEL_Y, WHEELBASE_R]}
-        spinRef={spin[3]}
-        flip
-      />
+      {glb ? (
+        <primitive object={glb.wheels} />
+      ) : (
+        <>
+          <mesh geometry={geo.arms} material={mat.carbon} />
+    
+          <Wheel geo={geo} mat={mat} position={[TRACK_HALF, WHEEL_Y, WHEELBASE_F]} steerRef={fl} spinRef={spin[0]} />
+          <Wheel
+            geo={geo}
+            mat={mat}
+            position={[-TRACK_HALF, WHEEL_Y, WHEELBASE_F]}
+            steerRef={fr}
+            spinRef={spin[1]}
+            flip
+          />
+          <Wheel geo={geo} mat={mat} position={[TRACK_HALF, WHEEL_Y, WHEELBASE_R]} spinRef={spin[2]} />
+          <Wheel
+            geo={geo}
+            mat={mat}
+            position={[-TRACK_HALF, WHEEL_Y, WHEELBASE_R]}
+            spinRef={spin[3]}
+            flip
+          />
+        </>
+      )}
     </group>
   )
 }
