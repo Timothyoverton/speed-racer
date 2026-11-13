@@ -31,6 +31,8 @@ const CARS = {
     url: 'assets/car/porsche911.glb',
     paint: ['paint'],
     brake: [],
+    // one material covers head and tail lamps; only the tail ones are brake lights
+    brakeRear: ['lights'],
     hide: ['license', 'logo'],
     wheelParts: { nodes: ['Cylinder000', 'Cylinder001', 'Cylinder.000', 'Cylinder.001'] },
     glass: ['window', 'glass'],
@@ -249,6 +251,21 @@ export function useCarGlb(id, ghost, color, wheelR, wheelY) {
       g.scale.setScalar(s)
       g.rotation.y = flip ? Math.PI : 0
       g.position.set(-mid.x * s * sign, wheelY - mid.y * s, -mid.z * s * sign)
+    }
+    // lamps that share a material front and back: light only the ones behind the middle
+    if (!ghost && spec.brakeRear) {
+      const c = new THREE.Vector3()
+      root.traverse((o) => {
+        if (!o.isMesh || !o.visible || starts(o.material?.name || '', spec.brakeRear) < 0) return
+        box.setFromObject(o).getCenter(c).applyMatrix4(T)
+        if ((c.z - mid.z) * sign >= 0) return
+        const m = o.material.clone()
+        m.emissive.set('#ff2a14')
+        m.emissiveMap = m.map
+        m.emissiveIntensity = 0.7
+        o.material = m
+        brake.push(m)
+      })
     }
     const tailZ = flip ? -(allT.max.z - mid.z) * s : (allT.min.z - mid.z) * s
     // steer and spin axes are the pivots' own; with a quarter turn the axle is z
