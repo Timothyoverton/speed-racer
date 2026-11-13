@@ -41,7 +41,7 @@ export default function RemoteCar() {
 
   return (
     <group ref={group} visible={false}>
-      <CarModel color={colour} />
+      <CarModel color={colour} model="concept" />
     </group>
   )
 }

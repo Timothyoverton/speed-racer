@@ -13,6 +13,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { carState } from '../game/carState.js'
 import { THEME } from '../game/themes.js'
 import { useCarGlb } from './carGlb.js'
+import { getCarModelId } from '../game/carModelChoice.js'
 
 const WHEEL_R = 0.42
 const TRACK_HALF = 0.95 // tub stays inboard of this, so the wheels stand clear
@@ -812,9 +813,9 @@ export default function CarModel(props) {
   )
 }
 
-function CarModelInner({ ghost = false, color = '#2f6dff', live = false }) {
+function CarModelInner({ ghost = false, color = '#2f6dff', live = false, model }) {
   const geo = useGeo(color)
-  const glb = useGlb(ghost, color, WHEEL_R, WHEEL_Y)
+  const glb = useGlb(model || getCarModelId(), ghost, color, WHEEL_R, WHEEL_Y)
   const mat = useMaterials(ghost, color)
 
   const chassis = useRef(null)
@@ -929,7 +930,7 @@ function CarModelInner({ ghost = false, color = '#2f6dff', live = false }) {
     for (const r of spin) if (r.current) r.current.rotation.x = -s.wheelSpin
     if (glb) {
       for (const g of glb.steer) g.rotation.y = steerAngle
-      for (const g of glb.spin) g.rotation.x = s.wheelSpin * glb.spinSign
+      for (const g of glb.spin) g.rotation[glb.spinAxis] = s.wheelSpin * glb.spinSign
       const lit = 0.7 + (s.brake > 0.05 || s.handbrake ? 5 : 0)
       for (const m of glb.brake) m.emissiveIntensity = lit
     }

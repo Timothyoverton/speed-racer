@@ -5,6 +5,7 @@ import { bestTime, bestTopSpeed, topTimes, getName, setName, medalFor } from '..
 import { formatTime, MEDAL_LABEL, MEDAL_ICON } from '../game/format.js'
 import { initAudio } from '../game/audio.js'
 import { CAR_COLOURS, getCarColourId, setCarColourId } from '../game/carColour.js'
+import { CAR_MODELS, getCarModelId, setCarModelId } from '../game/carModelChoice.js'
 import { touchModeSetting, setTouchMode, touchControlsActive } from '../game/device.js'
 import { enableTilt } from '../game/tilt.js'
 import { isMusicEnabled, setMusicEnabled } from '../game/music.js'
@@ -16,6 +17,7 @@ const MEDAL_ORDER = ['author', 'gold', 'silver', 'bronze']
 export default function Menu() {
   const [name, setNameState] = useState(getName())
   const [colour, setColour] = useState(getCarColourId)
+  const [carModel, setCarModel] = useState(getCarModelId)
   const [ctrl, setCtrl] = useState(touchModeSetting)
   const [music, setMusic] = useState(isMusicEnabled)
   const [recent] = useState(recentOpponents)
@@ -152,6 +154,22 @@ export default function Menu() {
 
         <div className="colours">
           <span className="label">Car</span>
+          {CAR_MODELS.map((c) => (
+            <button
+              key={c.id}
+              className={'ctrlmode' + (c.id === carModel ? ' active' : '')}
+              onClick={() => {
+                setCarModelId(c.id)
+                setCarModel(c.id)
+              }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="colours">
+          <span className="label">Paint</span>
           {CAR_COLOURS.map((c) => (
             <button
               key={c.id}
